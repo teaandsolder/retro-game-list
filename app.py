@@ -159,14 +159,9 @@ HTML_TEMPLATE = """
             margin-bottom: 8px;
         }
 
-        .input-row {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        input[type=text] {
-            flex: 1;
+        textarea {
+            width: 100%;
+            height: 100px;
             border: 1.5px solid var(--border);
             border-radius: 10px;
             padding: 10px 12px;
@@ -177,17 +172,25 @@ HTML_TEMPLATE = """
             background: #fafafa;
             transition: border-color 0.15s;
             -webkit-appearance: none;
-            min-width: 0;
+            resize: none;
+            display: block;
+            margin-bottom: 10px;
         }
 
-        input[type=text]:focus { border-color: var(--red); background: #fff; }
-        input[type=text]::placeholder { color: #bbb; }
+        textarea:focus { border-color: var(--red); background: #fff; }
+        textarea::placeholder { color: #bbb; line-height: 1.6; }
+
+        .btn-row {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
 
         .btn {
             background: var(--red);
             color: white;
             border: none;
-            padding: 10px 14px;
+            padding: 10px 18px;
             border-radius: 8px;
             font-family: 'DM Sans', sans-serif;
             font-weight: 600;
@@ -196,7 +199,6 @@ HTML_TEMPLATE = """
             -webkit-appearance: none;
             transition: opacity 0.15s;
             white-space: nowrap;
-            flex-shrink: 0;
         }
 
         .btn-outline {
@@ -308,10 +310,15 @@ HTML_TEMPLATE = """
 
         <div class="input-card">
             <label>Paste your list</label>
-            <div class="input-row">
-                <input type="text" id="gameInput" placeholder="Paste multiline list then hit Fetch" />
-                <button class="btn" id="fetchBtn" onclick="fetchPrices()">Fetch</button>
+            <textarea id="gameInput" placeholder="NES:
+Super Mario Bros 3
+Metroid
+
+SEGA CD:
+Snatcher"></textarea>
+            <div class="btn-row">
                 <button class="btn btn-outline" id="updateBtn" onclick="updatePrices()">Update</button>
+                <button class="btn" id="fetchBtn" onclick="fetchPrices()">Fetch Prices</button>
             </div>
         </div>
 
@@ -414,7 +421,6 @@ def index():
 def fetch():
     body = request.get_json()
     gamelist = body.get('gamelist', '')
-    gamelist = gamelist.replace(' | ', '\n').replace('|', '\n')
     final_data = parse_and_fetch(gamelist)
     updated = datetime.now().strftime("%d %b %Y, %H:%M")
     save_gist({"data": final_data, "updated": updated})
