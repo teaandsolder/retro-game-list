@@ -1,10 +1,90 @@
-from flask import Flask, render_template_string, request
+import os
+import re
+import json
+from datetime import datetime
+from flask import Flask, render_template_string, request, jsonify
 import requests
 from bs4 import BeautifulSoup
-import re
-from datetime import datetime
 
 app = Flask(__name__)
+
+GIST_ID = os.environ.get("GIST_ID")
+GIST_TOKEN = os.environ.get("GIST_TOKEN")
+GIST_FILENAME = "retro-hunter-data.json"
+GIST_HEADERS = {
+    "Authorization": f"token {GIST_TOKEN}",
+    "Accept": "application/vnd.github.v3+json"
+}
+
+def load_gist():
+    try:
+        r = requests.get(f"https://api.github.com/gists/{GIST_ID}", headers=GIST_HEADERS, timeout=10)
+        content = r.json()["files"][GIST_FILENAME]["content"]
+        return json.loads(content)
+    except Exception as e:
+        print(f"Error loading gist: {e}")
+        return {"data": {}, "updated": None}
+
+def save_gist(payload):
+    try:
+        body = {
+            "files": {
+                GIST_FILENAME: {
+                    "content": json.dumps(payload, indent=2)
+                }
+            }
+        }
+        requests.patch(f"https://api.github.com/gists/{GIST_ID}", headers=GIST_HEADERS, json=body, timeout=10)
+    except Exception as e:
+        print(f"Error saving gist: {e}")
+
+def get_market_price(system, title):
+    sys_map = {
+        'NES': 'nes', 'SNES': 'super-nintendo', 'N64': 'nintendo-64',
+        'GAMEBOY': 'gameboy', 'GAMEBOY COLOR': 'gameboy-color',
+        'SEGA MASTER SYSTEM': 'sega-master-system', 'SEGA GENESIS': 'sega-genesis',
+        'SEGA CD': 'sega-cd', 'SEGA GAME GEAR': 'sega-game-gear',
+        'PS1': 'playstation', 'PS2': 'playstation-2',
+        'NEO GEO AES': 'neo-geo-aes', '3DO': '3do',
+        'ATARI JAGUAR': 'atari-jaguar', 'PC ENGINE': 'pc-engine'
+    }
+    sys_key = system.upper().strip()
+    sys_slug = sys_map.get(sys_key, sys_key.lower().replace(" ", "-"))
+    game_slug = re.sub(r'\s+', '-', re.sub(r'[^a-z0-9\s-]', '', title.lower().strip()))
+    url = f"https://www.pricecharting.com/game/{sys_slug}/{game_slug}"
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        r = requests.get(url, headers=headers, timeout=10)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        used_td = soup.find('td', id='used_price')
+        complete_td = soup.find('td', id='complete_price')
+        if not used_td or not complete_td:
+            return "N/A", "N/A"
+        loose = used_td.find('span', class_='price').text.strip()
+        cib = complete_td.find('span', class_='price').text.strip()
+        return loose, cib
+    except Exception as e:
+        print(f"Error fetching {url}: {e}")
+        return "N/A", "N/A"
+
+def parse_and_fetch(gamelist):
+    import time
+    final_data = {}
+    current_system = "Unknown"
+    for line in gamelist.splitlines():
+        clean = line.strip().lstrip('*- ').strip()
+        if not clean:
+            continue
+        if clean.endswith(':'):
+            current_system = clean[:-1].strip()
+            final_data[current_system] = []
+        else:
+            time.sleep(0.5)
+            l, c = get_market_price(current_system, clean)
+            if current_system not in final_data:
+                final_data[current_system] = []
+            final_data[current_system].append({'title': clean, 'loose': l, 'cib': c})
+    return final_data
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -64,68 +144,69 @@ HTML_TEMPLATE = """
         .input-card {
             background: var(--card-bg);
             border-radius: 14px;
-            padding: 16px;
+            padding: 14px 16px;
             box-shadow: 0 1px 4px rgba(0,0,0,0.08);
             margin-bottom: 10px;
         }
 
         .input-card label {
             display: block;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             color: var(--subtext);
             text-transform: uppercase;
             letter-spacing: 0.8px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
-        textarea {
-            width: 100%;
-            height: 160px;
+        .input-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        input[type=text] {
+            flex: 1;
             border: 1.5px solid var(--border);
             border-radius: 10px;
-            padding: 12px;
+            padding: 10px 12px;
             font-family: 'DM Sans', sans-serif;
             font-size: 14px;
             color: var(--text);
-            resize: none;
             outline: none;
             background: #fafafa;
             transition: border-color 0.15s;
             -webkit-appearance: none;
+            min-width: 0;
         }
 
-        textarea:focus { border-color: var(--red); background: #fff; }
-        textarea::placeholder { color: #bbb; }
-
-        .input-footer {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: 10px;
-        }
-
-        .input-footer span {
-            font-size: 11px;
-            color: #bbb;
-        }
+        input[type=text]:focus { border-color: var(--red); background: #fff; }
+        input[type=text]::placeholder { color: #bbb; }
 
         .btn {
             background: var(--red);
             color: white;
             border: none;
-            padding: 10px 22px;
+            padding: 10px 14px;
             border-radius: 8px;
             font-family: 'DM Sans', sans-serif;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13px;
             cursor: pointer;
             -webkit-appearance: none;
             transition: opacity 0.15s;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
-        .btn:active { opacity: 0.8; }
-        .btn:disabled { opacity: 0.6; }
+        .btn-outline {
+            background: transparent;
+            color: var(--dark);
+            border: 1.5px solid var(--border);
+        }
+
+        .btn:active { opacity: 0.7; }
+        .btn:disabled { opacity: 0.5; }
 
         .last-updated {
             text-align: center;
@@ -207,6 +288,14 @@ HTML_TEMPLATE = """
             letter-spacing: 0.5px;
             margin-right: 2px;
         }
+
+        .spinner {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            font-size: 13px;
+            color: var(--subtext);
+        }
     </style>
 </head>
 <body>
@@ -219,27 +308,17 @@ HTML_TEMPLATE = """
 
         <div class="input-card">
             <label>Paste your list</label>
-            <form method="POST" id="priceForm">
-                <textarea name="gamelist" id="gamelist" placeholder="NES:
-Super Mario Bros 3
-Metroid
-
-SEGA CD:
-Snatcher
-Sonic CD"></textarea>
-                <div class="input-footer">
-                    <span>System name followed by colon, then games</span>
-                    <button type="submit" class="btn" id="fetchBtn">Fetch Prices</button>
-                </div>
-            </form>
+            <div class="input-row">
+                <input type="text" id="gameInput" placeholder="Paste multiline list then hit Fetch" />
+                <button class="btn" id="fetchBtn" onclick="fetchPrices()">Fetch</button>
+                <button class="btn btn-outline" id="updateBtn" onclick="updatePrices()">Update</button>
+            </div>
         </div>
 
-        {% if updated %}
-        <p class="last-updated">Last updated: {{ updated }}</p>
-        {% else %}
-        <p class="last-updated">Paste a list above and hit Fetch Prices</p>
-        {% endif %}
+        <p class="last-updated" id="lastUpdated">{{ updated if updated else 'No data loaded yet' }}</p>
+        <div class="spinner" id="spinner">Fetching prices, please wait...</div>
 
+        <div id="results">
         {% if data %}
             {% for system, games in data.items() %}
             <div class="system-card">
@@ -258,74 +337,103 @@ Sonic CD"></textarea>
             </div>
             {% endfor %}
         {% endif %}
+        </div>
 
     </div>
 
     <script>
-        document.getElementById('priceForm').addEventListener('submit', function() {
-            const btn = document.getElementById('fetchBtn');
-            btn.textContent = 'Fetching...';
-            btn.disabled = true;
-        });
-    </script>
+        function setLoading(msg) {
+            document.getElementById('fetchBtn').disabled = true;
+            document.getElementById('updateBtn').disabled = true;
+            document.getElementById('spinner').style.display = 'block';
+            document.getElementById('spinner').textContent = msg;
+        }
 
+        function clearLoading() {
+            document.getElementById('fetchBtn').disabled = false;
+            document.getElementById('updateBtn').disabled = false;
+            document.getElementById('spinner').style.display = 'none';
+        }
+
+        function renderResults(data, updated) {
+            let html = '';
+            for (const [system, games] of Object.entries(data)) {
+                html += '<div class="system-card"><div class="system-header">' + system + '</div><table>';
+                for (const game of games) {
+                    html += '<tr><td><span class="game-title">' + game.title + '</span></td>' +
+                        '<td class="price-box">' +
+                        '<span class="loose"><span class="price-label">L</span>' + game.loose + '</span>' +
+                        '<span class="cib"><span class="price-label">CIB</span>' + game.cib + '</span>' +
+                        '</td></tr>';
+                }
+                html += '</table></div>';
+            }
+            document.getElementById('results').innerHTML = html;
+            document.getElementById('lastUpdated').textContent = 'Last updated: ' + updated;
+        }
+
+        function fetchPrices() {
+            const input = document.getElementById('gameInput').value.trim();
+            if (!input) return;
+            setLoading('Fetching prices, please wait...');
+            fetch('/fetch', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({gamelist: input})
+            })
+            .then(r => r.json())
+            .then(res => {
+                clearLoading();
+                renderResults(res.data, res.updated);
+                document.getElementById('gameInput').value = '';
+            })
+            .catch(() => clearLoading());
+        }
+
+        function updatePrices() {
+            setLoading('Updating prices from PriceCharting...');
+            fetch('/update', {method: 'POST'})
+            .then(r => r.json())
+            .then(res => {
+                clearLoading();
+                renderResults(res.data, res.updated);
+            })
+            .catch(() => clearLoading());
+        }
+    </script>
 </body>
 </html>
 """
 
-def get_market_price(system, title):
-    sys_map = {
-        'NES': 'nes', 'SNES': 'super-nintendo', 'N64': 'nintendo-64',
-        'GAMEBOY': 'gameboy', 'GAMEBOY COLOR': 'gameboy-color',
-        'SEGA MASTER SYSTEM': 'sega-master-system', 'SEGA GENESIS': 'sega-genesis',
-        'SEGA CD': 'sega-cd', 'SEGA GAME GEAR': 'sega-game-gear',
-        'PS1': 'playstation', 'PS2': 'playstation-2',
-        'NEO GEO AES': 'neo-geo-aes', '3DO': '3do',
-        'ATARI JAGUAR': 'atari-jaguar', 'PC ENGINE': 'pc-engine'
-    }
-    sys_key = system.upper().strip()
-    sys_slug = sys_map.get(sys_key, sys_key.lower().replace(" ", "-"))
-    game_slug = re.sub(r'\s+', '-', re.sub(r'[^a-z0-9\s-]', '', title.lower().strip()))
-    url = f"https://www.pricecharting.com/game/{sys_slug}/{game_slug}"
-
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        r = requests.get(url, headers=headers, timeout=10)
-        soup = BeautifulSoup(r.text, 'html.parser')
-        used_td = soup.find('td', id='used_price')
-        complete_td = soup.find('td', id='complete_price')
-        if not used_td or not complete_td:
-            return "N/A", "N/A"
-        loose = used_td.find('span', class_='price').text.strip()
-        cib = complete_td.find('span', class_='price').text.strip()
-        return loose, cib
-    except Exception as e:
-        print(f"Error fetching {url}: {e}")
-        return "N/A", "N/A"
-
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
 def index():
-    final_data = {}
-    updated = None
-    if request.method == 'POST':
-        gamelist = request.form.get('gamelist', '')
-        current_system = "Unknown"
-        for line in gamelist.splitlines():
-            clean = line.strip().lstrip('*- ').strip()
-            if not clean:
-                continue
-            if clean.endswith(':'):
-                current_system = clean[:-1].strip()
-                final_data[current_system] = []
-            else:
-                import time
-                time.sleep(0.5)
-                l, c = get_market_price(current_system, clean)
-                if current_system not in final_data:
-                    final_data[current_system] = []
-                final_data[current_system].append({'title': clean, 'loose': l, 'cib': c})
-        updated = datetime.now().strftime("%d %b %Y, %H:%M")
-    return render_template_string(HTML_TEMPLATE, data=final_data, updated=updated)
+    saved = load_gist()
+    return render_template_string(HTML_TEMPLATE, data=saved.get("data", {}), updated=saved.get("updated"))
+
+@app.route('/fetch', methods=['POST'])
+def fetch():
+    body = request.get_json()
+    gamelist = body.get('gamelist', '')
+    gamelist = gamelist.replace(' | ', '\n').replace('|', '\n')
+    final_data = parse_and_fetch(gamelist)
+    updated = datetime.now().strftime("%d %b %Y, %H:%M")
+    save_gist({"data": final_data, "updated": updated})
+    return jsonify({"data": final_data, "updated": updated})
+
+@app.route('/update', methods=['POST'])
+def update():
+    saved = load_gist()
+    old_data = saved.get("data", {})
+    lines = []
+    for system, games in old_data.items():
+        lines.append(f"{system}:")
+        for game in games:
+            lines.append(game['title'])
+    gamelist = '\n'.join(lines)
+    final_data = parse_and_fetch(gamelist)
+    updated = datetime.now().strftime("%d %b %Y, %H:%M")
+    save_gist({"data": final_data, "updated": updated})
+    return jsonify({"data": final_data, "updated": updated})
 
 if __name__ == '__main__':
     app.run()
