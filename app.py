@@ -6,7 +6,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-HTML_TEMPLATE = '''
+HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,7 +37,6 @@ HTML_TEMPLATE = '''
 
         .container { max-width: 560px; margin: 0 auto; }
 
-        /* HEADER */
         .header {
             text-align: center;
             margin-bottom: 24px;
@@ -62,62 +61,71 @@ HTML_TEMPLATE = '''
             margin-top: 4px;
         }
 
-        /* UPLOAD CARD */
-        .upload-card {
+        .input-card {
             background: var(--card-bg);
             border-radius: 14px;
-            padding: 18px 20px;
+            padding: 16px;
             box-shadow: 0 1px 4px rgba(0,0,0,0.08);
             margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
         }
 
-        .upload-card .upload-icon {
-            width: 42px;
-            height: 42px;
-            background: #fff0f0;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            font-size: 20px;
-        }
-
-        .upload-card .upload-info {
-            flex: 1;
-        }
-
-        .upload-card .upload-info strong {
+        .input-card label {
             display: block;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 600;
-            color: var(--text);
+            color: var(--subtext);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 10px;
         }
 
-        .upload-card .upload-info span {
-            font-size: 12px;
-            color: var(--subtext);
+        textarea {
+            width: 100%;
+            height: 160px;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 12px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            color: var(--text);
+            resize: none;
+            outline: none;
+            background: #fafafa;
+            transition: border-color 0.15s;
+            -webkit-appearance: none;
+        }
+
+        textarea:focus { border-color: var(--red); background: #fff; }
+        textarea::placeholder { color: #bbb; }
+
+        .input-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .input-footer span {
+            font-size: 11px;
+            color: #bbb;
         }
 
         .btn {
             background: var(--red);
             color: white;
             border: none;
-            padding: 10px 18px;
+            padding: 10px 22px;
             border-radius: 8px;
             font-family: 'DM Sans', sans-serif;
             font-weight: 600;
-            font-size: 13px;
+            font-size: 14px;
             cursor: pointer;
-            white-space: nowrap;
             -webkit-appearance: none;
             transition: opacity 0.15s;
         }
 
         .btn:active { opacity: 0.8; }
+        .btn:disabled { opacity: 0.6; }
 
         .last-updated {
             text-align: center;
@@ -127,7 +135,6 @@ HTML_TEMPLATE = '''
             letter-spacing: 0.5px;
         }
 
-        /* SYSTEM CARDS */
         .system-card {
             background: var(--card-bg);
             border-radius: 14px;
@@ -158,7 +165,6 @@ HTML_TEMPLATE = '''
         }
 
         table { width: 100%; border-collapse: collapse; }
-
         tr { transition: background 0.1s; }
         tr:active { background: #fafafa; }
 
@@ -211,30 +217,27 @@ HTML_TEMPLATE = '''
             <p>Live Market Prices</p>
         </div>
 
-        <div class="upload-card">
-            <div class="upload-icon">📋</div>
-            <div class="upload-info">
-                <strong>Upload Collection List</strong>
-                <span>Plain .txt file, one game per line</span>
-            </div>
-            <form method="POST" enctype="multipart/form-data">
-                <input type="file" name="file" id="fileInput" style="display:none;" onchange="this.form.submit()">
-                <button type="button" class="btn" id="uploadBtn" onclick="document.getElementById('fileInput').click()">Upload</button>
-                <script>
-                document.getElementById('fileInput').addEventListener('change', function() {
-                    const btn = document.getElementById('uploadBtn');
-                    btn.textContent = 'Fetching...';
-                    btn.style.opacity = '0.7';
-                    btn.disabled = true;
-                });
-                </script>
+        <div class="input-card">
+            <label>Paste your list</label>
+            <form method="POST" id="priceForm">
+                <textarea name="gamelist" id="gamelist" placeholder="NES:
+Super Mario Bros 3
+Metroid
+
+SEGA CD:
+Snatcher
+Sonic CD"></textarea>
+                <div class="input-footer">
+                    <span>System name followed by colon, then games</span>
+                    <button type="submit" class="btn" id="fetchBtn">Fetch Prices</button>
+                </div>
             </form>
         </div>
 
         {% if updated %}
         <p class="last-updated">Last updated: {{ updated }}</p>
         {% else %}
-        <p class="last-updated">No data loaded yet</p>
+        <p class="last-updated">Paste a list above and hit Fetch Prices</p>
         {% endif %}
 
         {% if data %}
@@ -257,9 +260,18 @@ HTML_TEMPLATE = '''
         {% endif %}
 
     </div>
+
+    <script>
+        document.getElementById('priceForm').addEventListener('submit', function() {
+            const btn = document.getElementById('fetchBtn');
+            btn.textContent = 'Fetching...';
+            btn.disabled = true;
+        });
+    </script>
+
 </body>
 </html>
-'''
+"""
 
 def get_market_price(system, title):
     sys_map = {
@@ -269,8 +281,7 @@ def get_market_price(system, title):
         'SEGA CD': 'sega-cd', 'SEGA GAME GEAR': 'sega-game-gear',
         'PS1': 'playstation', 'PS2': 'playstation-2',
         'NEO GEO AES': 'neo-geo-aes', '3DO': '3do',
-        'TURBOGRAFX-16': 'turbografx-16', 'ATARI JAGUAR': 'atari-jaguar',
-        'PC ENGINE': 'pc-engine'
+        'ATARI JAGUAR': 'atari-jaguar', 'PC ENGINE': 'pc-engine'
     }
     sys_key = system.upper().strip()
     sys_slug = sys_map.get(sys_key, sys_key.lower().replace(" ", "-"))
@@ -297,25 +308,23 @@ def index():
     final_data = {}
     updated = None
     if request.method == 'POST':
-        file = request.files.get('file')
-        if file and file.filename.endswith('.txt'):
-            content = file.read().decode('utf-8')
-            current_system = "Unknown"
-            for line in content.splitlines():
-                clean = line.strip().lstrip('*- ').strip()
-                if not clean:
-                    continue
-                if clean.endswith(':'):
-                    current_system = clean[:-1].strip()
+        gamelist = request.form.get('gamelist', '')
+        current_system = "Unknown"
+        for line in gamelist.splitlines():
+            clean = line.strip().lstrip('*- ').strip()
+            if not clean:
+                continue
+            if clean.endswith(':'):
+                current_system = clean[:-1].strip()
+                final_data[current_system] = []
+            else:
+                import time
+                time.sleep(0.5)
+                l, c = get_market_price(current_system, clean)
+                if current_system not in final_data:
                     final_data[current_system] = []
-                else:
-                    import time
-                    time.sleep(0.5)
-                    l, c = get_market_price(current_system, clean)
-                    if current_system not in final_data:
-                        final_data[current_system] = []
-                    final_data[current_system].append({'title': clean, 'loose': l, 'cib': c})
-            updated = datetime.now().strftime("%d %b %Y, %H:%M")
+                final_data[current_system].append({'title': clean, 'loose': l, 'cib': c})
+        updated = datetime.now().strftime("%d %b %Y, %H:%M")
     return render_template_string(HTML_TEMPLATE, data=final_data, updated=updated)
 
 if __name__ == '__main__':
