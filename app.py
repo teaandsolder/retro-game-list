@@ -6,7 +6,7 @@ from datetime import datetime
 
 app = Flask(**name**)
 
-HTML_TEMPLATE = ‘’’
+HTML_TEMPLATE = '''
 
 <!DOCTYPE html>
 
