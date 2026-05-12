@@ -261,7 +261,7 @@ def get_market_price(system, title):
         'SEGA CD': 'sega-cd', 'SEGA GAME GEAR': 'sega-game-gear',
         'PS1': 'playstation', 'PS2': 'playstation-2',
         'NEO GEO AES': 'neo-geo-aes', '3DO': '3do',
-        'TURBOGRAFX-16': 'turbografx-16', 'ATARI JAGUAR': 'atari-jaguar',
+        'ATARI JAGUAR': 'atari-jaguar',
         'PC ENGINE': 'pc-engine'
     }
     sys_key = system.upper().strip()
