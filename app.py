@@ -219,7 +219,15 @@ HTML_TEMPLATE = '''
             </div>
             <form method="POST" enctype="multipart/form-data">
                 <input type="file" name="file" id="fileInput" style="display:none;" onchange="this.form.submit()">
-                <button type="button" class="btn" onclick="document.getElementById('fileInput').click()">Upload</button>
+                <button type="button" class="btn" id="uploadBtn" onclick="document.getElementById('fileInput').click()">Upload</button>
+                <script>
+                document.getElementById('fileInput').addEventListener('change', function() {
+                    const btn = document.getElementById('uploadBtn');
+                    btn.textContent = 'Fetching...';
+                    btn.style.opacity = '0.7';
+                    btn.disabled = true;
+                });
+                </script>
             </form>
         </div>
 
@@ -261,7 +269,7 @@ def get_market_price(system, title):
         'SEGA CD': 'sega-cd', 'SEGA GAME GEAR': 'sega-game-gear',
         'PS1': 'playstation', 'PS2': 'playstation-2',
         'NEO GEO AES': 'neo-geo-aes', '3DO': '3do',
-        'ATARI JAGUAR': 'atari-jaguar',
+        'TURBOGRAFX-16': 'turbografx-16', 'ATARI JAGUAR': 'atari-jaguar',
         'PC ENGINE': 'pc-engine'
     }
     sys_key = system.upper().strip()
