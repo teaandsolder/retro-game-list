@@ -1,0 +1,14 @@
+name: Weekly Price Refresh
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger refresh
+        run: |
+          curl -X POST https://retro-game-list.onrender.com/refresh
