@@ -83,6 +83,19 @@ def smart_fetch(current_data, saved_data):
         final_data[system] = sorted(final_data[system], key=lambda x: x["title"].lower())
     return final_data
 
+def full_fetch(data):
+    import time
+    final_data = {}
+    for system, games in data.items():
+        final_data[system] = []
+        for game in games:
+            title = game["title"]
+            time.sleep(0.5)
+            l, c, url = get_market_price(system, title)
+            final_data[system].append({"title": title, "loose": l, "cib": c, "url": url})
+        final_data[system] = sorted(final_data[system], key=lambda x: x["title"].lower())
+    return final_data
+
 def parse_list_text(gamelist):
     data = {}
     current_system = "Unknown"
@@ -191,8 +204,9 @@ Metroid
 SEGA CD:
 Snatcher"></textarea>
             <div class="btn-row">
+                <button class="btn btn-outline" id="updateAllBtn" onclick="updateAll()">Update All</button>
                 <button class="btn btn-outline" id="updateBtn" onclick="updatePrices()">Update</button>
-                <button class="btn" id="fetchBtn" onclick="fetchPrices()">Fetch Prices</button>
+                <button class="btn" id="fetchBtn" onclick="fetchPrices()">Add Games</button>
             </div>
         </div>
         <p class="last-updated" id="lastUpdated">{{ updated if updated else "No data loaded yet" }}</p>
@@ -292,6 +306,7 @@ Snatcher"></textarea>
         function setLoading(msg) {
             document.getElementById("fetchBtn").disabled = true;
             document.getElementById("updateBtn").disabled = true;
+            document.getElementById("updateAllBtn").disabled = true;
             document.getElementById("spinner").style.display = "block";
             document.getElementById("spinner").textContent = msg;
         }
@@ -299,6 +314,7 @@ Snatcher"></textarea>
         function clearLoading() {
             document.getElementById("fetchBtn").disabled = false;
             document.getElementById("updateBtn").disabled = false;
+            document.getElementById("updateAllBtn").disabled = false;
             document.getElementById("spinner").style.display = "none";
         }
 
@@ -330,7 +346,7 @@ Snatcher"></textarea>
         function fetchPrices() {
             const input = document.getElementById("gameInput").value.trim();
             if (!input) return;
-            setLoading("Fetching prices, please wait...");
+            setLoading("Adding games, please wait...");
             fetch("/fetch", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
@@ -353,6 +369,17 @@ Snatcher"></textarea>
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({data: data})
             })
+            .then(r => r.json())
+            .then(res => {
+                clearLoading();
+                renderResults(res.data, res.updated);
+            })
+            .catch(() => clearLoading());
+        }
+
+        function updateAll() {
+            setLoading("Refreshing all prices, please wait...");
+            fetch("/refresh", { method: "POST" })
             .then(r => r.json())
             .then(res => {
                 clearLoading();
@@ -390,6 +417,15 @@ def update():
     saved = load_gist()
     saved_data = saved.get("data", {})
     final_data = smart_fetch(current_data, saved_data)
+    updated = datetime.now().strftime("%d %b %Y, %H:%M")
+    save_gist({"data": final_data, "updated": updated})
+    return jsonify({"data": final_data, "updated": updated})
+
+@app.route("/refresh", methods=["POST"])
+def refresh():
+    saved = load_gist()
+    existing_data = saved.get("data", {})
+    final_data = full_fetch(existing_data)
     updated = datetime.now().strftime("%d %b %Y, %H:%M")
     save_gist({"data": final_data, "updated": updated})
     return jsonify({"data": final_data, "updated": updated})
