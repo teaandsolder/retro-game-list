@@ -50,7 +50,7 @@ def get_market_price(system, title):
     }
     sys_key = system.upper().strip()
     sys_slug = sys_map.get(sys_key, sys_key.lower().replace(" ", "-"))
-    game_slug = re.sub(r"\s+", "-", re.sub(r"[^a-z0-9\s-]", "", title.lower().strip()))
+    game_slug = re.sub(r"\s+", "-", re.sub(r"[^a-z0-9\s\'-]", "", title.lower().strip())).replace("'", "%27")
     url = f"https://www.pricecharting.com/game/{sys_slug}/{game_slug}"
     try:
         headers = {"User-Agent": "Mozilla/5.0"}
