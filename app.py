@@ -73,6 +73,7 @@ def parse_and_fetch(gamelist):
     current_system = "Unknown"
     for line in gamelist.splitlines():
         clean = line.strip().lstrip("*- ").strip()
+        clean = clean.replace("\u2018", "'").replace("\u2019", "'").replace("\u201c", '"').replace("\u201d", '"')
         if not clean:
             continue
         if clean.endswith(":"):
