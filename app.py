@@ -158,19 +158,18 @@ HTML_TEMPLATE = """
         .system-header.open .chevron { transform: rotate(180deg); }
         .system-body { display: none; }
         .system-body.open { display: block; }
-        .game-row { display: flex; align-items: center; border-bottom: 1px solid var(--border); overflow: hidden; position: relative; }
+        .game-row { display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--border); gap: 10px; }
         .game-row:last-of-type { border-bottom: none; }
-        .game-inner { display: flex; align-items: center; width: 100%; padding: 12px 16px; transition: transform 0.25s ease; background: white; }
-        .game-row.swiped .game-inner { transform: translateX(-72px); }
-        .game-title-wrap { flex: 1; }
-        .game-title { font-weight: 600; color: var(--text); font-size: 14px; background: none; border: none; outline: none; width: 100%; font-family: "DM Sans", sans-serif; padding: 0; }
+        .game-title-wrap { flex: 1; min-width: 0; }
+        .game-title { font-weight: 600; color: var(--text); font-size: 14px; background: none; border: none; outline: none; width: 100%; font-family: "DM Sans", sans-serif; padding: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .game-title:focus { color: var(--red); }
         .price-box { text-align: right; flex-shrink: 0; }
         .loose { color: var(--green); font-weight: 600; font-size: 14px; display: block; }
         .cib { color: var(--red); font-weight: 700; font-size: 14px; display: block; margin-top: 2px; }
         .price-label { font-size: 10px; color: #bbb; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px; }
         .na-link { color: #bbb; font-size: 11px; display: block; margin-top: 3px; text-decoration: underline; }
-        .delete-btn { position: absolute; right: 0; top: 0; bottom: 0; width: 68px; background: #e53935; color: white; border: none; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: "DM Sans", sans-serif; }
+        .del-btn { background: none; border: none; color: #ccc; font-size: 20px; cursor: pointer; padding: 0 0 0 4px; line-height: 1; flex-shrink: 0; font-weight: 300; }
+        .del-btn:active { color: #e53935; }
         .add-row { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); }
         .add-input { flex: 1; border: none; outline: none; font-family: "DM Sans", sans-serif; font-size: 14px; color: var(--text); background: transparent; }
         .add-input::placeholder { color: #bbb; }
@@ -209,22 +208,20 @@ Snatcher"></textarea>
                 <div class="system-body">
                     {% for game in games %}
                     <div class="game-row" data-title="{{ game.title }}">
-                        <div class="game-inner">
-                            <div class="game-title-wrap">
-                                <input class="game-title" type="text" value="{{ game.title }}" onchange="titleChanged(this)" />
-                            </div>
-                            <div class="price-box">
-                                {% if game.loose == "N/A" %}
-                                    <span class="loose"><span class="price-label">L</span>N/A</span>
-                                    <span class="cib"><span class="price-label">CIB</span>N/A</span>
-                                    <a class="na-link" href="{{ game.url }}" target="_blank">Search PriceCharting</a>
-                                {% else %}
-                                    <span class="loose"><span class="price-label">L</span>{{ game.loose }}</span>
-                                    <span class="cib"><span class="price-label">CIB</span>{{ game.cib }}</span>
-                                {% endif %}
-                            </div>
+                        <div class="game-title-wrap">
+                            <input class="game-title" type="text" value="{{ game.title }}" onchange="titleChanged(this)" />
                         </div>
-                        <button class="delete-btn" onclick="deleteGame(this)">Delete</button>
+                        <div class="price-box">
+                            {% if game.loose == "N/A" %}
+                                <span class="loose"><span class="price-label">L</span>N/A</span>
+                                <span class="cib"><span class="price-label">CIB</span>N/A</span>
+                                <a class="na-link" href="{{ game.url }}" target="_blank">Search PriceCharting</a>
+                            {% else %}
+                                <span class="loose"><span class="price-label">L</span>{{ game.loose }}</span>
+                                <span class="cib"><span class="price-label">CIB</span>{{ game.cib }}</span>
+                            {% endif %}
+                        </div>
+                        <button class="del-btn" onclick="deleteGame(this)">&#10005;</button>
                     </div>
                     {% endfor %}
                     <div class="add-row">
@@ -238,51 +235,9 @@ Snatcher"></textarea>
         </div>
     </div>
     <script>
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let activeRow = null;
-        let isSwiping = false;
-
-        document.addEventListener("touchstart", function(e) {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-            isSwiping = false;
-            const row = e.target.closest(".game-row");
-            if (!row && activeRow) {
-                activeRow.classList.remove("swiped");
-                activeRow = null;
-            }
-        }, { passive: true });
-
-        document.addEventListener("touchmove", function(e) {
-            const dx = Math.abs(e.touches[0].clientX - touchStartX);
-            const dy = Math.abs(e.touches[0].clientY - touchStartY);
-            if (dx > dy && dx > 10) isSwiping = true;
-        }, { passive: true });
-
-        document.addEventListener("touchend", function(e) {
-            if (!isSwiping) return;
-            const row = e.target.closest(".game-row");
-            if (!row) return;
-            const diff = touchStartX - e.changedTouches[0].clientX;
-            if (diff > 50) {
-                if (activeRow && activeRow !== row) activeRow.classList.remove("swiped");
-                row.classList.add("swiped");
-                activeRow = row;
-            } else if (diff < -30) {
-                row.classList.remove("swiped");
-                activeRow = null;
-            }
-        }, { passive: true });
-
         function toggleSystem(header) {
             header.classList.toggle("open");
-            const body = header.nextElementSibling;
-            body.classList.toggle("open");
-            if (body.classList.contains("open")) {
-                body.querySelectorAll(".game-row").forEach(r => r.classList.remove("swiped"));
-                activeRow = null;
-            }
+            header.nextElementSibling.classList.toggle("open");
         }
 
         function getSystemData() {
@@ -319,7 +274,7 @@ Snatcher"></textarea>
             const newRow = document.createElement("div");
             newRow.className = "game-row";
             newRow.dataset.title = title;
-            newRow.innerHTML = "<div class='game-inner'><div class='game-title-wrap'><input class='game-title' type='text' value='" + title.replace(/'/g, "&#39;") + "' onchange='titleChanged(this)' /></div><div class='price-box'><span class='loose'><span class='price-label'>L</span>-</span><span class='cib'><span class='price-label'>CIB</span>-</span></div></div><button class='delete-btn' onclick='deleteGame(this)'>Delete</button>";
+            newRow.innerHTML = "<div class='game-title-wrap'><input class='game-title' type='text' value='" + title.replace(/'/g, "&#39;") + "' onchange='titleChanged(this)' /></div><div class='price-box'><span class='loose'><span class='price-label'>L</span>-</span><span class='cib'><span class='price-label'>CIB</span>-</span></div><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>";
             systemBody.insertBefore(newRow, addRow);
             input.value = "";
             saveList();
@@ -361,9 +316,9 @@ Snatcher"></textarea>
                         priceHtml = "<span class='loose'><span class='price-label'>L</span>" + game.loose + "</span><span class='cib'><span class='price-label'>CIB</span>" + game.cib + "</span>";
                     }
                     html += "<div class='game-row' data-title='" + game.title.replace(/'/g, "&#39;") + "'>";
-                    html += "<div class='game-inner'><div class='game-title-wrap'><input class='game-title' type='text' value='" + game.title.replace(/'/g, "&#39;") + "' onchange='titleChanged(this)' /></div>";
-                    html += "<div class='price-box'>" + priceHtml + "</div></div>";
-                    html += "<button class='delete-btn' onclick='deleteGame(this)'>Delete</button></div>";
+                    html += "<div class='game-title-wrap'><input class='game-title' type='text' value='" + game.title.replace(/'/g, "&#39;") + "' onchange='titleChanged(this)' /></div>";
+                    html += "<div class='price-box'>" + priceHtml + "</div>";
+                    html += "<button class='del-btn' onclick='deleteGame(this)'>&#10005;</button></div>";
                 }
                 html += "<div class='add-row'><input class='add-input' type='text' placeholder='Add a game...' /><button class='add-btn' onclick='addGame(this)'>+</button></div>";
                 html += "</div></div>";
