@@ -59,13 +59,13 @@ def get_market_price(system, title):
         used_td = soup.find("td", id="used_price")
         complete_td = soup.find("td", id="complete_price")
         if not used_td or not complete_td:
-            return "N/A", "N/A"
+            return "N/A", "N/A", url
         loose = used_td.find("span", class_="price").text.strip()
         cib = complete_td.find("span", class_="price").text.strip()
-        return loose, cib
+        return loose, cib, url
     except Exception as e:
         print(f"Error fetching {url}: {e}")
-        return "N/A", "N/A"
+        return "N/A", "N/A", url
 
 def parse_and_fetch(gamelist):
     import time
@@ -81,10 +81,12 @@ def parse_and_fetch(gamelist):
             final_data[current_system] = []
         else:
             time.sleep(0.5)
-            l, c = get_market_price(current_system, clean)
+            l, c, url = get_market_price(current_system, clean)
             if current_system not in final_data:
                 final_data[current_system] = []
-            final_data[current_system].append({"title": clean, "loose": l, "cib": c})
+            final_data[current_system].append({"title": clean, "loose": l, "cib": c, "url": url})
+    for system in final_data:
+        final_data[system] = sorted(final_data[system], key=lambda x: x["title"].lower())
     return final_data
 
 HTML_TEMPLATE = """
@@ -139,6 +141,7 @@ HTML_TEMPLATE = """
         .loose { color: var(--green); font-weight: 600; font-size: 14px; display: block; }
         .cib { color: var(--red); font-weight: 700; font-size: 14px; display: block; margin-top: 2px; }
         .price-label { font-size: 10px; color: #bbb; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px; }
+        .na-link { color: #bbb; font-size: 11px; display: block; margin-top: 3px; text-decoration: underline; }
         .spinner { display: none; text-align: center; padding: 20px; font-size: 13px; color: var(--subtext); }
     </style>
 </head>
@@ -177,8 +180,14 @@ Snatcher"></textarea>
                         <tr>
                             <td><span class="game-title">{{ game.title }}</span></td>
                             <td class="price-box">
-                                <span class="loose"><span class="price-label">L</span>{{ game.loose }}</span>
-                                <span class="cib"><span class="price-label">CIB</span>{{ game.cib }}</span>
+                                {% if game.loose == "N/A" %}
+                                    <span class="loose"><span class="price-label">L</span>N/A</span>
+                                    <span class="cib"><span class="price-label">CIB</span>N/A</span>
+                                    <a class="na-link" href="{{ game.url }}" target="_blank">Search on PriceCharting</a>
+                                {% else %}
+                                    <span class="loose"><span class="price-label">L</span>{{ game.loose }}</span>
+                                    <span class="cib"><span class="price-label">CIB</span>{{ game.cib }}</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -210,7 +219,13 @@ Snatcher"></textarea>
             for (const [system, games] of Object.entries(data)) {
                 html += "<div class='system-card'><div class='system-header' onclick='toggleSystem(this)'>" + system + "<span class='chevron'>&#9660;</span></div><div class='system-body'><table>";
                 for (const game of games) {
-                    html += "<tr><td><span class='game-title'>" + game.title + "</span></td><td class='price-box'><span class='loose'><span class='price-label'>L</span>" + game.loose + "</span><span class='cib'><span class='price-label'>CIB</span>" + game.cib + "</span></td></tr>";
+                    let priceHtml = "";
+                    if (game.loose === "N/A") {
+                        priceHtml = "<span class='loose'><span class='price-label'>L</span>N/A</span><span class='cib'><span class='price-label'>CIB</span>N/A</span><a class='na-link' href='" + game.url + "' target='_blank'>Search on PriceCharting</a>";
+                    } else {
+                        priceHtml = "<span class='loose'><span class='price-label'>L</span>" + game.loose + "</span><span class='cib'><span class='price-label'>CIB</span>" + game.cib + "</span>";
+                    }
+                    html += "<tr><td><span class='game-title'>" + game.title + "</span></td><td class='price-box'>" + priceHtml + "</td></tr>";
                 }
                 html += "</table></div></div>";
             }
