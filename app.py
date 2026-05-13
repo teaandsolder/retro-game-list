@@ -188,18 +188,27 @@ HTML_TEMPLATE = """
         .header h1 { font-family: "Bebas Neue", sans-serif; font-size: 42px; letter-spacing: 3px; color: var(--dark); line-height: 1; }
         .header h1 span { color: var(--red); }
         .header p { font-size: 12px; color: var(--subtext); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
-        .input-card { background: var(--card-bg); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 10px; }
-        .input-card label { display: block; font-size: 11px; font-weight: 600; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
-        textarea { width: 100%; height: 100px; border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; font-family: "DM Sans", sans-serif; font-size: 14px; color: var(--text); outline: none; background: #fafafa; resize: none; display: block; margin-bottom: 10px; }
-        textarea:focus { border-color: var(--red); background: #fff; }
-        textarea::placeholder { color: #bbb; line-height: 1.6; }
-        .btn-row { display: flex; gap: 8px; justify-content: flex-end; }
-        .btn { background: var(--red); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-family: "DM Sans", sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; }
+
+        .action-bar { display: flex; gap: 8px; margin-bottom: 10px; }
+        .btn { background: var(--red); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-family: "DM Sans", sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; flex: 1; }
         .btn-outline { background: transparent; color: var(--dark); border: 1.5px solid var(--border); }
         .btn:active { opacity: 0.7; }
         .btn:disabled { opacity: 0.5; }
+
+        .import-toggle { text-align: center; margin-bottom: 10px; }
+        .import-toggle button { background: none; border: none; color: #aaa; font-size: 12px; font-family: "DM Sans", sans-serif; cursor: pointer; text-decoration: underline; }
+
+        .import-card { background: var(--card-bg); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 10px; display: none; }
+        .import-card.open { display: block; }
+        .import-card label { display: block; font-size: 11px; font-weight: 600; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+        textarea { width: 100%; height: 100px; border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 12px; font-family: "DM Sans", sans-serif; font-size: 14px; color: var(--text); outline: none; background: #fafafa; resize: none; display: block; margin-bottom: 10px; }
+        textarea:focus { border-color: var(--red); background: #fff; }
+        textarea::placeholder { color: #bbb; line-height: 1.6; }
+        .import-btn-row { display: flex; justify-content: flex-end; }
+
         .last-updated { text-align: center; font-size: 11px; color: #aaa; margin-bottom: 22px; letter-spacing: 0.5px; }
         .spinner { display: none; text-align: center; padding: 20px; font-size: 13px; color: var(--subtext); }
+
         .system-card { background: var(--card-bg); border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 16px; overflow: hidden; }
         .system-header { background: var(--dark); color: white; padding: 10px 16px; font-family: "Bebas Neue", sans-serif; font-size: 18px; letter-spacing: 2px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
         .system-header::before { content: ""; display: inline-block; width: 3px; height: 16px; background: var(--red); border-radius: 2px; flex-shrink: 0; }
@@ -235,22 +244,32 @@ HTML_TEMPLATE = """
             <h1>🕹 RETRO<span>HUNTER</span></h1>
             <p>Live Market Prices</p>
         </div>
-        <div class="input-card">
-            <label>Paste a new list</label>
+
+        <div class="action-bar">
+            <button class="btn btn-outline" id="updateBtn" onclick="updatePrices()">Update</button>
+            <button class="btn btn-outline" id="updateAllBtn" onclick="confirmUpdateAll()">Update All</button>
+        </div>
+
+        <div class="import-toggle">
+            <button onclick="toggleImport()">&#43; Import a list</button>
+        </div>
+
+        <div class="import-card" id="importCard">
+            <label>Paste list to import</label>
             <textarea id="gameInput" placeholder="NES:
 Super Mario Bros 3
 Metroid
 
 SEGA CD:
 Snatcher"></textarea>
-            <div class="btn-row">
-                <button class="btn btn-outline" id="updateAllBtn" onclick="updateAll()">Update All</button>
-                <button class="btn btn-outline" id="updateBtn" onclick="updatePrices()">Update</button>
+            <div class="import-btn-row">
                 <button class="btn" id="fetchBtn" onclick="fetchPrices()">Add Games</button>
             </div>
         </div>
+
         <p class="last-updated" id="lastUpdated">{{ updated if updated else "No data loaded yet" }}</p>
         <div class="spinner" id="spinner">Fetching prices, please wait...</div>
+
         <div id="results">
         {% if data %}
             {% for system, games in data.items() %}
@@ -303,6 +322,11 @@ Snatcher"></textarea>
         </div>
     </div>
     <script>
+        function toggleImport() {
+            const card = document.getElementById("importCard");
+            card.classList.toggle("open");
+        }
+
         function toggleSystem(header) {
             header.classList.toggle("open");
             header.nextElementSibling.classList.toggle("open");
@@ -421,6 +445,7 @@ Snatcher"></textarea>
                 clearLoading();
                 renderResults(res.data, res.updated);
                 document.getElementById("gameInput").value = "";
+                document.getElementById("importCard").classList.remove("open");
             })
             .catch(() => clearLoading());
         }
@@ -441,15 +466,17 @@ Snatcher"></textarea>
             .catch(() => clearLoading());
         }
 
-        function updateAll() {
-            setLoading("Refreshing all prices, please wait...");
-            fetch("/refresh", { method: "POST" })
-            .then(r => r.json())
-            .then(res => {
-                clearLoading();
-                renderResults(res.data, res.updated);
-            })
-            .catch(() => clearLoading());
+        function confirmUpdateAll() {
+            if (confirm("Update All re-fetches every game and can take several minutes. Continue?")) {
+                setLoading("Refreshing all prices, please wait...");
+                fetch("/refresh", { method: "POST" })
+                .then(r => r.json())
+                .then(res => {
+                    clearLoading();
+                    renderResults(res.data, res.updated);
+                })
+                .catch(() => clearLoading());
+            }
         }
     </script>
 </body>
