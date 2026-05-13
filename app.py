@@ -184,7 +184,6 @@ HTML_TEMPLATE = """
         .header h1 { font-family: "Bebas Neue", sans-serif; font-size: 42px; letter-spacing: 3px; color: var(--dark); line-height: 1; }
         .header h1 span { color: var(--red); }
         .header p { font-size: 12px; color: var(--subtext); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
-
         .action-bar { display: flex; gap: 8px; margin-bottom: 10px; }
         .btn { border: 1.5px solid #ccc; padding: 11px 18px; border-radius: 8px; font-family: "DM Sans", sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; flex: 1; background: white; color: var(--dark); }
         .btn:active { opacity: 0.7; }
@@ -192,10 +191,8 @@ HTML_TEMPLATE = """
         .btn-red { background: var(--red); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-family: "DM Sans", sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; }
         .btn-red:active { opacity: 0.7; }
         .btn-red:disabled { opacity: 0.4; }
-
         .import-toggle { text-align: center; margin-bottom: 6px; }
         .import-toggle button { background: none; border: none; color: #aaa; font-size: 12px; font-family: "DM Sans", sans-serif; cursor: pointer; text-decoration: underline; padding: 4px; }
-
         .import-card { background: var(--card-bg); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 10px; display: none; }
         .import-card.open { display: block; }
         .import-card label { display: block; font-size: 11px; font-weight: 600; color: var(--subtext); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
@@ -203,10 +200,8 @@ HTML_TEMPLATE = """
         textarea:focus { border-color: var(--red); background: #fff; }
         textarea::placeholder { color: #bbb; line-height: 1.6; }
         .import-btn-row { display: flex; justify-content: flex-end; }
-
         .last-updated { text-align: center; font-size: 11px; color: #aaa; margin-bottom: 22px; letter-spacing: 0.5px; }
         .spinner { display: none; text-align: center; padding: 20px; font-size: 13px; color: var(--subtext); }
-
         .system-card { background: var(--card-bg); border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 16px; overflow: hidden; }
         .system-header { background: var(--dark); color: white; padding: 10px 16px; font-family: "Bebas Neue", sans-serif; font-size: 18px; letter-spacing: 2px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
         .system-header::before { content: ""; display: inline-block; width: 3px; height: 16px; background: var(--red); border-radius: 2px; flex-shrink: 0; }
@@ -214,32 +209,26 @@ HTML_TEMPLATE = """
         .system-header.open .chevron { transform: rotate(180deg); }
         .system-body { display: none; }
         .system-body.open { display: block; }
-
         .game-row { display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--border); gap: 8px; }
         .game-row:last-of-type { border-bottom: none; }
         .game-title-wrap { flex: 1; min-width: 0; }
         .game-title { font-weight: 600; color: var(--text); font-size: 14px; background: none; border: none; outline: none; width: 100%; font-family: "DM Sans", sans-serif; padding: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .game-title:focus { color: var(--red); }
-
-        .price-box { flex-shrink: 0; }
+        .price-box { flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
         .price-link { text-decoration: none; display: block; }
-
-        .price-row { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-bottom: 2px; }
+        .price-col { display: flex; flex-direction: column; align-items: flex-end; }
+        .price-row { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 2px; }
         .price-row:last-child { margin-bottom: 0; }
-
-        .change { font-size: 10px; font-weight: 600; min-width: 38px; text-align: right; }
+        .change-col { display: flex; flex-direction: column; align-items: flex-end; min-width: 38px; }
+        .change { font-size: 10px; font-weight: 600; line-height: 1.6; }
         .change.up { color: var(--green); }
         .change.down { color: var(--red); }
-
-        .price-label { font-size: 10px; color: #bbb; text-transform: uppercase; letter-spacing: 0.5px; width: 20px; text-align: right; }
-        .loose { color: var(--green); font-weight: 600; font-size: 14px; min-width: 70px; text-align: right; }
-        .cib { color: var(--red); font-weight: 700; font-size: 14px; min-width: 70px; text-align: right; }
-
+        .price-label { font-size: 10px; color: #bbb; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 3px; }
+        .loose { color: var(--green); font-weight: 600; font-size: 14px; }
+        .cib { color: var(--red); font-weight: 700; font-size: 14px; }
         .na-link { color: #bbb; font-size: 11px; display: block; text-decoration: underline; text-align: right; }
-
         .del-btn { background: none; border: none; color: #ccc; font-size: 20px; cursor: pointer; padding: 0 0 0 4px; line-height: 1; flex-shrink: 0; font-weight: 300; }
         .del-btn:active { color: #e53935; }
-
         .add-row { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); }
         .add-input { flex: 1; border: none; outline: none; font-family: "DM Sans", sans-serif; font-size: 14px; color: var(--text); background: transparent; }
         .add-input::placeholder { color: #bbb; }
@@ -252,16 +241,13 @@ HTML_TEMPLATE = """
             <h1>🕹 RETRO<span>HUNTER</span></h1>
             <p>Live Market Prices</p>
         </div>
-
         <div class="action-bar">
             <button class="btn" id="updateBtn" onclick="updatePrices()">Update</button>
             <button class="btn" id="updateAllBtn" onclick="confirmUpdateAll()">Update All</button>
         </div>
-
         <div class="import-toggle">
             <button onclick="toggleImport()">&#43; Import a list</button>
         </div>
-
         <div class="import-card" id="importCard">
             <label>Paste list to import</label>
             <textarea id="gameInput" placeholder="NES:
@@ -274,17 +260,14 @@ Snatcher"></textarea>
                 <button class="btn-red" id="fetchBtn" onclick="fetchPrices()">Add Games</button>
             </div>
         </div>
-
         <p class="last-updated" id="lastUpdated">{{ updated if updated else "No data loaded yet" }}</p>
         <div class="spinner" id="spinner">Fetching prices, please wait...</div>
-
         <div id="results">
         {% if data %}
             {% for system, games in data.items() %}
             <div class="system-card" data-system="{{ system }}">
                 <div class="system-header" onclick="toggleSystem(this)">
-                    {{ system }}
-                    <span class="chevron">&#9660;</span>
+                    {{ system }}<span class="chevron">&#9660;</span>
                 </div>
                 <div class="system-body">
                     {% for game in games %}
@@ -296,16 +279,14 @@ Snatcher"></textarea>
                             {% if game.loose == "N/A" %}
                                 <a class="na-link" href="{{ game.url }}" target="_blank">N/A — Search</a>
                             {% else %}
+                                <div class="change-col">
+                                    <span class="change {{ 'up' if game.loose_change and game.loose_change > 0 else 'down' if game.loose_change and game.loose_change < 0 else '' }}">{% if game.loose_change %}{{ '↑' if game.loose_change > 0 else '↓' }}{{ game.loose_change|abs }}%{% endif %}</span>
+                                    <span class="change {{ 'up' if game.cib_change and game.cib_change > 0 else 'down' if game.cib_change and game.cib_change < 0 else '' }}">{% if game.cib_change %}{{ '↑' if game.cib_change > 0 else '↓' }}{{ game.cib_change|abs }}%{% endif %}</span>
+                                </div>
                                 <a class="price-link" href="{{ game.url }}" target="_blank">
-                                    <div class="price-row">
-                                        <span class="change {{ 'up' if game.loose_change and game.loose_change > 0 else 'down' if game.loose_change and game.loose_change < 0 else '' }}">{% if game.loose_change %}{{ '↑' if game.loose_change > 0 else '↓' }}{{ game.loose_change|abs }}%{% endif %}</span>
-                                        <span class="price-label">L</span>
-                                        <span class="loose">{{ game.loose }}</span>
-                                    </div>
-                                    <div class="price-row">
-                                        <span class="change {{ 'up' if game.cib_change and game.cib_change > 0 else 'down' if game.cib_change and game.cib_change < 0 else '' }}">{% if game.cib_change %}{{ '↑' if game.cib_change > 0 else '↓' }}{{ game.cib_change|abs }}%{% endif %}</span>
-                                        <span class="price-label">CIB</span>
-                                        <span class="cib">{{ game.cib }}</span>
+                                    <div class="price-col">
+                                        <div class="price-row"><span class="price-label">L</span><span class="loose">{{ game.loose }}</span></div>
+                                        <div class="price-row"><span class="price-label">CIB</span><span class="cib">{{ game.cib }}</span></div>
                                     </div>
                                 </a>
                             {% endif %}
@@ -367,7 +348,7 @@ Snatcher"></textarea>
             const newRow = document.createElement("div");
             newRow.className = "game-row";
             newRow.dataset.title = title;
-            newRow.innerHTML = "<div class='game-title-wrap'><input class='game-title' type='text' value='" + title.replace(/'/g, "&#39;") + "' onchange='titleChanged(this)' /></div><div class='price-box'><div class='price-row'><span class='change'></span><span class='price-label'>L</span><span class='loose'>-</span></div><div class='price-row'><span class='change'></span><span class='price-label'>CIB</span><span class='cib'>-</span></div></div><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>";
+            newRow.innerHTML = "<div class='game-title-wrap'><input class='game-title' type='text' value='" + title.replace(/'/g, "&#39;") + "' onchange='titleChanged(this)' /></div><div class='price-box'><div class='change-col'><span class='change'></span><span class='change'></span></div><a class='price-link'><div class='price-col'><div class='price-row'><span class='price-label'>L</span><span class='loose'>-</span></div><div class='price-row'><span class='price-label'>CIB</span><span class='cib'>-</span></div></div></a></div><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>";
             systemBody.insertBefore(newRow, addRow);
             input.value = "";
             saveList();
@@ -415,10 +396,13 @@ Snatcher"></textarea>
                     if (game.loose === "N/A") {
                         priceHtml = "<a class='na-link' href='" + game.url + "' target='_blank'>N/A — Search</a>";
                     } else {
-                        priceHtml = "<a class='price-link' href='" + game.url + "' target='_blank'>" +
-                            "<div class='price-row'>" + changeHtml(game.loose_change) + "<span class='price-label'>L</span><span class='loose'>" + game.loose + "</span></div>" +
-                            "<div class='price-row'>" + changeHtml(game.cib_change) + "<span class='price-label'>CIB</span><span class='cib'>" + game.cib + "</span></div>" +
-                            "</a>";
+                        priceHtml =
+                            "<div class='change-col'>" + changeHtml(game.loose_change) + changeHtml(game.cib_change) + "</div>" +
+                            "<a class='price-link' href='" + game.url + "' target='_blank'>" +
+                            "<div class='price-col'>" +
+                            "<div class='price-row'><span class='price-label'>L</span><span class='loose'>" + game.loose + "</span></div>" +
+                            "<div class='price-row'><span class='price-label'>CIB</span><span class='cib'>" + game.cib + "</span></div>" +
+                            "</div></a>";
                     }
                     html += "<div class='game-row' data-title='" + game.title.replace(/'/g, "&#39;") + "'>";
                     html += "<div class='game-title-wrap'><input class='game-title' type='text' value='" + game.title.replace(/'/g, "&#39;") + "' onchange='titleChanged(this)' /></div>";
