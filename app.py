@@ -239,26 +239,34 @@ Snatcher"></textarea>
     </div>
     <script>
         let touchStartX = 0;
+        let touchStartY = 0;
         let activeRow = null;
+        let isSwiping = false;
 
         document.addEventListener("touchstart", function(e) {
             touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            isSwiping = false;
             const row = e.target.closest(".game-row");
-            if (!row) {
-                if (activeRow) { activeRow.classList.remove("swiped"); activeRow = null; }
-                return;
-            }
-            if (activeRow && activeRow !== row) {
+            if (!row && activeRow) {
                 activeRow.classList.remove("swiped");
                 activeRow = null;
             }
         }, { passive: true });
 
+        document.addEventListener("touchmove", function(e) {
+            const dx = Math.abs(e.touches[0].clientX - touchStartX);
+            const dy = Math.abs(e.touches[0].clientY - touchStartY);
+            if (dx > dy && dx > 10) isSwiping = true;
+        }, { passive: true });
+
         document.addEventListener("touchend", function(e) {
+            if (!isSwiping) return;
             const row = e.target.closest(".game-row");
             if (!row) return;
             const diff = touchStartX - e.changedTouches[0].clientX;
             if (diff > 50) {
+                if (activeRow && activeRow !== row) activeRow.classList.remove("swiped");
                 row.classList.add("swiped");
                 activeRow = row;
             } else if (diff < -30) {
