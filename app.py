@@ -1,7 +1,7 @@
 import os
 import re
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, render_template_string, request, jsonify
 import requests
 from bs4 import BeautifulSoup
@@ -15,6 +15,9 @@ GIST_HEADERS = {
     "Authorization": f"token {GIST_TOKEN}",
     "Accept": "application/vnd.github.v3+json"
 }
+
+def now_eastern():
+    return (datetime.now() - timedelta(hours=4)).strftime("%d %b %Y, %H:%M")
 
 def load_gist():
     try:
@@ -403,7 +406,7 @@ def fetch():
     gamelist = body.get("gamelist", "")
     new_data_raw = parse_list_text(gamelist)
     new_data = parse_and_fetch(new_data_raw)
-    updated = datetime.now().strftime("%d %b %Y, %H:%M")
+    updated = now_eastern()
     saved = load_gist()
     existing_data = saved.get("data", {})
     existing_data.update(new_data)
@@ -417,7 +420,7 @@ def update():
     saved = load_gist()
     saved_data = saved.get("data", {})
     final_data = smart_fetch(current_data, saved_data)
-    updated = datetime.now().strftime("%d %b %Y, %H:%M")
+    updated = now_eastern()
     save_gist({"data": final_data, "updated": updated})
     return jsonify({"data": final_data, "updated": updated})
 
@@ -426,7 +429,7 @@ def refresh():
     saved = load_gist()
     existing_data = saved.get("data", {})
     final_data = full_fetch(existing_data)
-    updated = datetime.now().strftime("%d %b %Y, %H:%M")
+    updated = now_eastern()
     save_gist({"data": final_data, "updated": updated})
     return jsonify({"data": final_data, "updated": updated})
 
