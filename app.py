@@ -67,9 +67,24 @@ def get_market_price(system, title):
         print(f"Error fetching {url}: {e}")
         return "N/A", "N/A", url
 
-def parse_and_fetch(gamelist):
+def smart_fetch(current_data, saved_data):
     import time
     final_data = {}
+    for system, titles in current_data.items():
+        final_data[system] = []
+        existing = {g["title"]: g for g in saved_data.get(system, [])}
+        for title in titles:
+            if title in existing and existing[title].get("loose") not in (None, "-", ""):
+                final_data[system].append(existing[title])
+            else:
+                time.sleep(0.5)
+                l, c, url = get_market_price(system, title)
+                final_data[system].append({"title": title, "loose": l, "cib": c, "url": url})
+        final_data[system] = sorted(final_data[system], key=lambda x: x["title"].lower())
+    return final_data
+
+def parse_list_text(gamelist):
+    data = {}
     current_system = "Unknown"
     for line in gamelist.splitlines():
         clean = line.strip().lstrip("*- ").strip()
@@ -78,14 +93,23 @@ def parse_and_fetch(gamelist):
             continue
         if clean.endswith(":"):
             current_system = clean[:-1].strip()
-            final_data[current_system] = []
+            data[current_system] = []
         else:
+            if current_system not in data:
+                data[current_system] = []
+            data[current_system].append({"title": clean, "loose": None, "cib": None, "url": None})
+    return data
+
+def parse_and_fetch(data_dict):
+    import time
+    final_data = {}
+    for system, games in data_dict.items():
+        final_data[system] = []
+        for game in games:
+            title = game["title"]
             time.sleep(0.5)
-            l, c, url = get_market_price(current_system, clean)
-            if current_system not in final_data:
-                final_data[current_system] = []
-            final_data[current_system].append({"title": clean, "loose": l, "cib": c, "url": url})
-    for system in final_data:
+            l, c, url = get_market_price(system, title)
+            final_data[system].append({"title": title, "loose": l, "cib": c, "url": url})
         final_data[system] = sorted(final_data[system], key=lambda x: x["title"].lower())
     return final_data
 
@@ -126,6 +150,7 @@ HTML_TEMPLATE = """
         .btn:active { opacity: 0.7; }
         .btn:disabled { opacity: 0.5; }
         .last-updated { text-align: center; font-size: 11px; color: #aaa; margin-bottom: 22px; letter-spacing: 0.5px; }
+        .spinner { display: none; text-align: center; padding: 20px; font-size: 13px; color: var(--subtext); }
         .system-card { background: var(--card-bg); border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 16px; overflow: hidden; }
         .system-header { background: var(--dark); color: white; padding: 10px 16px; font-family: "Bebas Neue", sans-serif; font-size: 18px; letter-spacing: 2px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
         .system-header::before { content: ""; display: inline-block; width: 3px; height: 16px; background: var(--red); border-radius: 2px; flex-shrink: 0; }
@@ -133,16 +158,23 @@ HTML_TEMPLATE = """
         .system-header.open .chevron { transform: rotate(180deg); }
         .system-body { display: none; }
         .system-body.open { display: block; }
-        table { width: 100%; border-collapse: collapse; }
-        td { padding: 13px 16px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
-        tr:last-child td { border-bottom: none; }
-        .game-title { font-weight: 600; color: var(--text); font-size: 14px; }
-        .price-box { text-align: right; }
+        .game-row { display: flex; align-items: center; border-bottom: 1px solid var(--border); overflow: hidden; position: relative; }
+        .game-row:last-of-type { border-bottom: none; }
+        .game-inner { display: flex; align-items: center; width: 100%; padding: 12px 16px; transition: transform 0.25s ease; background: white; }
+        .game-row.swiped .game-inner { transform: translateX(-72px); }
+        .game-title-wrap { flex: 1; }
+        .game-title { font-weight: 600; color: var(--text); font-size: 14px; background: none; border: none; outline: none; width: 100%; font-family: "DM Sans", sans-serif; padding: 0; }
+        .game-title:focus { color: var(--red); }
+        .price-box { text-align: right; flex-shrink: 0; }
         .loose { color: var(--green); font-weight: 600; font-size: 14px; display: block; }
         .cib { color: var(--red); font-weight: 700; font-size: 14px; display: block; margin-top: 2px; }
         .price-label { font-size: 10px; color: #bbb; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px; }
         .na-link { color: #bbb; font-size: 11px; display: block; margin-top: 3px; text-decoration: underline; }
-        .spinner { display: none; text-align: center; padding: 20px; font-size: 13px; color: var(--subtext); }
+        .delete-btn { position: absolute; right: 0; top: 0; bottom: 0; width: 68px; background: #e53935; color: white; border: none; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; font-family: "DM Sans", sans-serif; }
+        .add-row { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); }
+        .add-input { flex: 1; border: none; outline: none; font-family: "DM Sans", sans-serif; font-size: 14px; color: var(--text); background: transparent; }
+        .add-input::placeholder { color: #bbb; }
+        .add-btn { background: none; border: none; color: var(--red); font-size: 22px; cursor: pointer; line-height: 1; padding: 0 4px; font-weight: 300; }
     </style>
 </head>
 <body>
@@ -152,7 +184,7 @@ HTML_TEMPLATE = """
             <p>Live Market Prices</p>
         </div>
         <div class="input-card">
-            <label>Paste your list</label>
+            <label>Paste a new list</label>
             <textarea id="gameInput" placeholder="NES:
 Super Mario Bros 3
 Metroid
@@ -169,29 +201,36 @@ Snatcher"></textarea>
         <div id="results">
         {% if data %}
             {% for system, games in data.items() %}
-            <div class="system-card">
+            <div class="system-card" data-system="{{ system }}">
                 <div class="system-header" onclick="toggleSystem(this)">
                     {{ system }}
                     <span class="chevron">&#9660;</span>
                 </div>
                 <div class="system-body">
-                    <table>
-                        {% for game in games %}
-                        <tr>
-                            <td><span class="game-title">{{ game.title }}</span></td>
-                            <td class="price-box">
+                    {% for game in games %}
+                    <div class="game-row" data-title="{{ game.title }}">
+                        <div class="game-inner">
+                            <div class="game-title-wrap">
+                                <input class="game-title" type="text" value="{{ game.title }}" onchange="titleChanged(this)" />
+                            </div>
+                            <div class="price-box">
                                 {% if game.loose == "N/A" %}
                                     <span class="loose"><span class="price-label">L</span>N/A</span>
                                     <span class="cib"><span class="price-label">CIB</span>N/A</span>
-                                    <a class="na-link" href="{{ game.url }}" target="_blank">Search on PriceCharting</a>
+                                    <a class="na-link" href="{{ game.url }}" target="_blank">Search PriceCharting</a>
                                 {% else %}
                                     <span class="loose"><span class="price-label">L</span>{{ game.loose }}</span>
                                     <span class="cib"><span class="price-label">CIB</span>{{ game.cib }}</span>
                                 {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </table>
+                            </div>
+                        </div>
+                        <button class="delete-btn" onclick="deleteGame(this)">Delete</button>
+                    </div>
+                    {% endfor %}
+                    <div class="add-row">
+                        <input class="add-input" type="text" placeholder="Add a game..." />
+                        <button class="add-btn" onclick="addGame(this)">+</button>
+                    </div>
                 </div>
             </div>
             {% endfor %}
@@ -199,39 +238,127 @@ Snatcher"></textarea>
         </div>
     </div>
     <script>
+        let touchStartX = 0;
+        let activeRow = null;
+
+        document.addEventListener("touchstart", function(e) {
+            touchStartX = e.touches[0].clientX;
+            const row = e.target.closest(".game-row");
+            if (!row) {
+                if (activeRow) { activeRow.classList.remove("swiped"); activeRow = null; }
+                return;
+            }
+            if (activeRow && activeRow !== row) {
+                activeRow.classList.remove("swiped");
+                activeRow = null;
+            }
+        }, { passive: true });
+
+        document.addEventListener("touchend", function(e) {
+            const row = e.target.closest(".game-row");
+            if (!row) return;
+            const diff = touchStartX - e.changedTouches[0].clientX;
+            if (diff > 50) {
+                row.classList.add("swiped");
+                activeRow = row;
+            } else if (diff < -30) {
+                row.classList.remove("swiped");
+                activeRow = null;
+            }
+        }, { passive: true });
+
         function toggleSystem(header) {
             header.classList.toggle("open");
             header.nextElementSibling.classList.toggle("open");
         }
+
+        function getSystemData() {
+            const data = {};
+            document.querySelectorAll(".system-card").forEach(card => {
+                const system = card.dataset.system;
+                data[system] = [];
+                card.querySelectorAll(".game-row").forEach(row => {
+                    const title = row.querySelector(".game-title").value.trim();
+                    if (title) data[system].push(title);
+                });
+            });
+            return data;
+        }
+
+        function titleChanged(input) {
+            const row = input.closest(".game-row");
+            row.dataset.title = input.value;
+            saveList();
+        }
+
+        function deleteGame(btn) {
+            const row = btn.closest(".game-row");
+            row.remove();
+            saveList();
+        }
+
+        function addGame(btn) {
+            const addRow = btn.closest(".add-row");
+            const input = addRow.querySelector(".add-input");
+            const title = input.value.trim();
+            if (!title) return;
+            const systemBody = addRow.closest(".system-body");
+            const newRow = document.createElement("div");
+            newRow.className = "game-row";
+            newRow.dataset.title = title;
+            newRow.innerHTML = "<div class='game-inner'><div class='game-title-wrap'><input class='game-title' type='text' value='" + title.replace(/'/g, "&#39;") + "' onchange='titleChanged(this)' /></div><div class='price-box'><span class='loose'><span class='price-label'>L</span>-</span><span class='cib'><span class='price-label'>CIB</span>-</span></div></div><button class='delete-btn' onclick='deleteGame(this)'>Delete</button>";
+            systemBody.insertBefore(newRow, addRow);
+            input.value = "";
+            saveList();
+        }
+
+        function saveList() {
+            const data = getSystemData();
+            fetch("/save", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({data: data})
+            });
+        }
+
         function setLoading(msg) {
             document.getElementById("fetchBtn").disabled = true;
             document.getElementById("updateBtn").disabled = true;
             document.getElementById("spinner").style.display = "block";
             document.getElementById("spinner").textContent = msg;
         }
+
         function clearLoading() {
             document.getElementById("fetchBtn").disabled = false;
             document.getElementById("updateBtn").disabled = false;
             document.getElementById("spinner").style.display = "none";
         }
+
         function renderResults(data, updated) {
             let html = "";
             for (const [system, games] of Object.entries(data)) {
-                html += "<div class='system-card'><div class='system-header' onclick='toggleSystem(this)'>" + system + "<span class='chevron'>&#9660;</span></div><div class='system-body'><table>";
+                html += "<div class='system-card' data-system='" + system + "'>";
+                html += "<div class='system-header' onclick='toggleSystem(this)'>" + system + "<span class='chevron'>&#9660;</span></div>";
+                html += "<div class='system-body'>";
                 for (const game of games) {
                     let priceHtml = "";
                     if (game.loose === "N/A") {
-                        priceHtml = "<span class='loose'><span class='price-label'>L</span>N/A</span><span class='cib'><span class='price-label'>CIB</span>N/A</span><a class='na-link' href='" + game.url + "' target='_blank'>Search on PriceCharting</a>";
+                        priceHtml = "<span class='loose'><span class='price-label'>L</span>N/A</span><span class='cib'><span class='price-label'>CIB</span>N/A</span><a class='na-link' href='" + game.url + "' target='_blank'>Search PriceCharting</a>";
                     } else {
                         priceHtml = "<span class='loose'><span class='price-label'>L</span>" + game.loose + "</span><span class='cib'><span class='price-label'>CIB</span>" + game.cib + "</span>";
                     }
-                    html += "<tr><td><span class='game-title'>" + game.title + "</span></td><td class='price-box'>" + priceHtml + "</td></tr>";
+                    html += "<div class='game-row' data-title='" + game.title.replace(/'/g, "&#39;") + "'>";
+                    html += "<div class='game-inner'><div class='game-title-wrap'><input class='game-title' type='text' value='" + game.title.replace(/'/g, "&#39;") + "' onchange='titleChanged(this)' /></div>";
+                    html += "<div class='price-box'>" + priceHtml + "</div></div>";
+                    html += "<button class='delete-btn' onclick='deleteGame(this)'>Delete</button></div>";
                 }
-                html += "</table></div></div>";
+                html += "<div class='add-row'><input class='add-input' type='text' placeholder='Add a game...' /><button class='add-btn' onclick='addGame(this)'>+</button></div>";
+                html += "</div></div>";
             }
             document.getElementById("results").innerHTML = html;
             document.getElementById("lastUpdated").textContent = "Last updated: " + updated;
         }
+
         function fetchPrices() {
             const input = document.getElementById("gameInput").value.trim();
             if (!input) return;
@@ -249,9 +376,15 @@ Snatcher"></textarea>
             })
             .catch(() => clearLoading());
         }
+
         function updatePrices() {
-            setLoading("Updating prices from PriceCharting...");
-            fetch("/update", {method: "POST"})
+            const data = getSystemData();
+            setLoading("Fetching new prices only...");
+            fetch("/update", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({data: data})
+            })
             .then(r => r.json())
             .then(res => {
                 clearLoading();
@@ -273,7 +406,8 @@ def index():
 def fetch():
     body = request.get_json()
     gamelist = body.get("gamelist", "")
-    new_data = parse_and_fetch(gamelist)
+    new_data_raw = parse_list_text(gamelist)
+    new_data = parse_and_fetch(new_data_raw)
     updated = datetime.now().strftime("%d %b %Y, %H:%M")
     saved = load_gist()
     existing_data = saved.get("data", {})
@@ -283,18 +417,29 @@ def fetch():
 
 @app.route("/update", methods=["POST"])
 def update():
+    body = request.get_json()
+    current_data = body.get("data", {})
     saved = load_gist()
-    old_data = saved.get("data", {})
-    lines = []
-    for system, games in old_data.items():
-        lines.append(f"{system}:")
-        for game in games:
-            lines.append(game["title"])
-    gamelist = "\n".join(lines)
-    final_data = parse_and_fetch(gamelist)
+    saved_data = saved.get("data", {})
+    final_data = smart_fetch(current_data, saved_data)
     updated = datetime.now().strftime("%d %b %Y, %H:%M")
     save_gist({"data": final_data, "updated": updated})
     return jsonify({"data": final_data, "updated": updated})
+
+@app.route("/save", methods=["POST"])
+def save():
+    body = request.get_json()
+    current_data = body.get("data", {})
+    saved = load_gist()
+    existing_data = saved.get("data", {})
+    for system, titles in current_data.items():
+        if system in existing_data:
+            existing_titles = {g["title"]: g for g in existing_data[system]}
+            existing_data[system] = [existing_titles.get(t, {"title": t, "loose": "-", "cib": "-", "url": ""}) for t in titles]
+        else:
+            existing_data[system] = [{"title": t, "loose": "-", "cib": "-", "url": ""} for t in titles]
+    save_gist({"data": existing_data, "updated": saved.get("updated")})
+    return jsonify({"ok": True})
 
 if __name__ == "__main__":
     app.run()
