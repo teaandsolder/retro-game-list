@@ -93,8 +93,6 @@ def enrich_with_change(new_game, old_game):
     cib_change = calc_change(old_game.get("cib"), new_game.get("cib"))
     new_game["loose_change"] = loose_change
     new_game["cib_change"] = cib_change
-    new_game["prev_loose"] = old_game.get("loose")
-    new_game["prev_cib"] = old_game.get("cib")
     return new_game
 
 def smart_fetch(current_data, saved_data):
@@ -190,13 +188,21 @@ HTML_TEMPLATE = """
         .header p { font-size: 12px; color: var(--subtext); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
 
         .action-bar { display: flex; gap: 8px; margin-bottom: 10px; }
-        .btn { background: var(--red); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-family: "DM Sans", sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; flex: 1; }
-        .btn-outline { background: transparent; color: var(--dark); border: 1.5px solid var(--border); }
+        .btn {
+            border: none; padding: 11px 18px; border-radius: 8px;
+            font-family: "DM Sans", sans-serif; font-weight: 600; font-size: 13px;
+            cursor: pointer; white-space: nowrap; flex: 1;
+            background: var(--dark); color: white;
+        }
+        .btn-outline {
+            background: white; color: var(--dark);
+            border: 1.5px solid #ccc;
+        }
         .btn:active { opacity: 0.7; }
-        .btn:disabled { opacity: 0.5; }
+        .btn:disabled { opacity: 0.4; }
 
-        .import-toggle { text-align: center; margin-bottom: 10px; }
-        .import-toggle button { background: none; border: none; color: #aaa; font-size: 12px; font-family: "DM Sans", sans-serif; cursor: pointer; text-decoration: underline; }
+        .import-toggle { text-align: center; margin-bottom: 6px; }
+        .import-toggle button { background: none; border: none; color: #aaa; font-size: 12px; font-family: "DM Sans", sans-serif; cursor: pointer; text-decoration: underline; padding: 4px; }
 
         .import-card { background: var(--card-bg); border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 10px; display: none; }
         .import-card.open { display: block; }
@@ -205,6 +211,9 @@ HTML_TEMPLATE = """
         textarea:focus { border-color: var(--red); background: #fff; }
         textarea::placeholder { color: #bbb; line-height: 1.6; }
         .import-btn-row { display: flex; justify-content: flex-end; }
+        .btn-red { background: var(--red); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-family: "DM Sans", sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; }
+        .btn-red:active { opacity: 0.7; }
+        .btn-red:disabled { opacity: 0.4; }
 
         .last-updated { text-align: center; font-size: 11px; color: #aaa; margin-bottom: 22px; letter-spacing: 0.5px; }
         .spinner { display: none; text-align: center; padding: 20px; font-size: 13px; color: var(--subtext); }
@@ -216,22 +225,27 @@ HTML_TEMPLATE = """
         .system-header.open .chevron { transform: rotate(180deg); }
         .system-body { display: none; }
         .system-body.open { display: block; }
+
         .game-row { display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--border); gap: 10px; }
         .game-row:last-of-type { border-bottom: none; }
         .game-title-wrap { flex: 1; min-width: 0; }
         .game-title { font-weight: 600; color: var(--text); font-size: 14px; background: none; border: none; outline: none; width: 100%; font-family: "DM Sans", sans-serif; padding: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .game-title:focus { color: var(--red); }
-        .price-box { text-align: right; flex-shrink: 0; }
+
+        .price-box { text-align: right; flex-shrink: 0; min-width: 110px; }
         .price-link { text-decoration: none; display: block; }
-        .loose { color: var(--green); font-weight: 600; font-size: 14px; display: block; }
-        .cib { color: var(--red); font-weight: 700; font-size: 14px; display: block; margin-top: 2px; }
-        .price-label { font-size: 10px; color: #bbb; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px; }
-        .change { font-size: 10px; font-weight: 600; margin-left: 4px; }
+        .price-row { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+        .loose { color: var(--green); font-weight: 600; font-size: 14px; }
+        .cib { color: var(--red); font-weight: 700; font-size: 14px; }
+        .price-label { font-size: 10px; color: #bbb; text-transform: uppercase; letter-spacing: 0.5px; }
+        .change { font-size: 10px; font-weight: 600; min-width: 36px; text-align: left; }
         .change.up { color: var(--green); }
         .change.down { color: var(--red); }
-        .na-link { color: #bbb; font-size: 11px; display: block; margin-top: 3px; text-decoration: underline; }
+        .na-link { color: #bbb; font-size: 11px; display: block; text-decoration: underline; }
+
         .del-btn { background: none; border: none; color: #ccc; font-size: 20px; cursor: pointer; padding: 0 0 0 4px; line-height: 1; flex-shrink: 0; font-weight: 300; }
         .del-btn:active { color: #e53935; }
+
         .add-row { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); }
         .add-input { flex: 1; border: none; outline: none; font-family: "DM Sans", sans-serif; font-size: 14px; color: var(--text); background: transparent; }
         .add-input::placeholder { color: #bbb; }
@@ -263,7 +277,7 @@ Metroid
 SEGA CD:
 Snatcher"></textarea>
             <div class="import-btn-row">
-                <button class="btn" id="fetchBtn" onclick="fetchPrices()">Add Games</button>
+                <button class="btn-red" id="fetchBtn" onclick="fetchPrices()">Add Games</button>
             </div>
         </div>
 
@@ -286,25 +300,23 @@ Snatcher"></textarea>
                         </div>
                         <div class="price-box">
                             {% if game.loose == "N/A" %}
-                                <a class="na-link" href="{{ game.url }}" target="_blank">N/A — Search PriceCharting</a>
+                                <a class="na-link" href="{{ game.url }}" target="_blank">N/A — Search</a>
                             {% else %}
                                 <a class="price-link" href="{{ game.url }}" target="_blank">
-                                    <span class="loose">
-                                        <span class="price-label">L</span>{{ game.loose }}
-                                        {% if game.loose_change %}
-                                            <span class="change {{ 'up' if game.loose_change > 0 else 'down' }}">
-                                                {{ '↑' if game.loose_change > 0 else '↓' }}{{ game.loose_change|abs }}%
-                                            </span>
-                                        {% endif %}
-                                    </span>
-                                    <span class="cib">
-                                        <span class="price-label">CIB</span>{{ game.cib }}
-                                        {% if game.cib_change %}
-                                            <span class="change {{ 'up' if game.cib_change > 0 else 'down' }}">
-                                                {{ '↑' if game.cib_change > 0 else '↓' }}{{ game.cib_change|abs }}%
-                                            </span>
-                                        {% endif %}
-                                    </span>
+                                    <div class="price-row">
+                                        <span class="price-label">L</span>
+                                        <span class="loose">{{ game.loose }}</span>
+                                        <span class="change {{ 'up' if game.loose_change and game.loose_change > 0 else 'down' if game.loose_change and game.loose_change < 0 else '' }}">
+                                            {% if game.loose_change %}{{ '↑' if game.loose_change > 0 else '↓' }}{{ game.loose_change|abs }}%{% endif %}
+                                        </span>
+                                    </div>
+                                    <div class="price-row">
+                                        <span class="price-label">CIB</span>
+                                        <span class="cib">{{ game.cib }}</span>
+                                        <span class="change {{ 'up' if game.cib_change and game.cib_change > 0 else 'down' if game.cib_change and game.cib_change < 0 else '' }}">
+                                            {% if game.cib_change %}{{ '↑' if game.cib_change > 0 else '↓' }}{{ game.cib_change|abs }}%{% endif %}
+                                        </span>
+                                    </div>
                                 </a>
                             {% endif %}
                         </div>
@@ -323,8 +335,7 @@ Snatcher"></textarea>
     </div>
     <script>
         function toggleImport() {
-            const card = document.getElementById("importCard");
-            card.classList.toggle("open");
+            document.getElementById("importCard").classList.toggle("open");
         }
 
         function toggleSystem(header) {
@@ -366,7 +377,7 @@ Snatcher"></textarea>
             const newRow = document.createElement("div");
             newRow.className = "game-row";
             newRow.dataset.title = title;
-            newRow.innerHTML = "<div class='game-title-wrap'><input class='game-title' type='text' value='" + title.replace(/'/g, "&#39;") + "' onchange='titleChanged(this)' /></div><div class='price-box'><span class='loose'><span class='price-label'>L</span>-</span><span class='cib'><span class='price-label'>CIB</span>-</span></div><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>";
+            newRow.innerHTML = "<div class='game-title-wrap'><input class='game-title' type='text' value='" + title.replace(/'/g, "&#39;") + "' onchange='titleChanged(this)' /></div><div class='price-box'><div class='price-row'><span class='price-label'>L</span><span class='loose'>-</span><span class='change'></span></div><div class='price-row'><span class='price-label'>CIB</span><span class='cib'>-</span><span class='change'></span></div></div><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>";
             systemBody.insertBefore(newRow, addRow);
             input.value = "";
             saveList();
@@ -397,7 +408,7 @@ Snatcher"></textarea>
         }
 
         function changeHtml(val) {
-            if (!val) return "";
+            if (!val) return "<span class='change'></span>";
             const cls = val > 0 ? "up" : "down";
             const arrow = val > 0 ? "↑" : "↓";
             return "<span class='change " + cls + "'>" + arrow + Math.abs(val) + "%</span>";
@@ -412,11 +423,11 @@ Snatcher"></textarea>
                 for (const game of games) {
                     let priceHtml = "";
                     if (game.loose === "N/A") {
-                        priceHtml = "<a class='na-link' href='" + game.url + "' target='_blank'>N/A — Search PriceCharting</a>";
+                        priceHtml = "<a class='na-link' href='" + game.url + "' target='_blank'>N/A — Search</a>";
                     } else {
                         priceHtml = "<a class='price-link' href='" + game.url + "' target='_blank'>" +
-                            "<span class='loose'><span class='price-label'>L</span>" + game.loose + changeHtml(game.loose_change) + "</span>" +
-                            "<span class='cib'><span class='price-label'>CIB</span>" + game.cib + changeHtml(game.cib_change) + "</span>" +
+                            "<div class='price-row'><span class='price-label'>L</span><span class='loose'>" + game.loose + "</span>" + changeHtml(game.loose_change) + "</div>" +
+                            "<div class='price-row'><span class='price-label'>CIB</span><span class='cib'>" + game.cib + "</span>" + changeHtml(game.cib_change) + "</div>" +
                             "</a>";
                     }
                     html += "<div class='game-row' data-title='" + game.title.replace(/'/g, "&#39;") + "'>";
