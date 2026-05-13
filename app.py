@@ -277,7 +277,12 @@ Snatcher"></textarea>
 
         function toggleSystem(header) {
             header.classList.toggle("open");
-            header.nextElementSibling.classList.toggle("open");
+            const body = header.nextElementSibling;
+            body.classList.toggle("open");
+            if (body.classList.contains("open")) {
+                body.querySelectorAll(".game-row").forEach(r => r.classList.remove("swiped"));
+                activeRow = null;
+            }
         }
 
         function getSystemData() {
