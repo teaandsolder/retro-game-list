@@ -258,10 +258,13 @@ def index():
 def fetch():
     body = request.get_json()
     gamelist = body.get("gamelist", "")
-    final_data = parse_and_fetch(gamelist)
+    new_data = parse_and_fetch(gamelist)
     updated = datetime.now().strftime("%d %b %Y, %H:%M")
-    save_gist({"data": final_data, "updated": updated})
-    return jsonify({"data": final_data, "updated": updated})
+    saved = load_gist()
+    existing_data = saved.get("data", {})
+    existing_data.update(new_data)
+    save_gist({"data": existing_data, "updated": updated})
+    return jsonify({"data": existing_data, "updated": updated})
 
 @app.route("/update", methods=["POST"])
 def update():
