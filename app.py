@@ -41,6 +41,22 @@ def save_gist(payload):
     except Exception as e:
         print(f"Error saving gist: {e}")
 
+def parse_price(price_str):
+    try:
+        return float(price_str.replace("$", "").replace(",", ""))
+    except:
+        return None
+
+def calc_change(old_str, new_str):
+    old = parse_price(old_str)
+    new = parse_price(new_str)
+    if old is None or new is None or old == 0:
+        return None
+    pct = ((new - old) / old) * 100
+    if abs(pct) < 1:
+        return None
+    return round(pct, 1)
+
 def get_market_price(system, title):
     sys_map = {
         "NES": "nes", "SNES": "super-nintendo", "N64": "nintendo-64",
@@ -70,6 +86,17 @@ def get_market_price(system, title):
         print(f"Error fetching {url}: {e}")
         return "N/A", "N/A", url
 
+def enrich_with_change(new_game, old_game):
+    if not old_game:
+        return new_game
+    loose_change = calc_change(old_game.get("loose"), new_game.get("loose"))
+    cib_change = calc_change(old_game.get("cib"), new_game.get("cib"))
+    new_game["loose_change"] = loose_change
+    new_game["cib_change"] = cib_change
+    new_game["prev_loose"] = old_game.get("loose")
+    new_game["prev_cib"] = old_game.get("cib")
+    return new_game
+
 def smart_fetch(current_data, saved_data):
     import time
     final_data = {}
@@ -82,7 +109,9 @@ def smart_fetch(current_data, saved_data):
             else:
                 time.sleep(0.5)
                 l, c, url = get_market_price(system, title)
-                final_data[system].append({"title": title, "loose": l, "cib": c, "url": url})
+                new_game = {"title": title, "loose": l, "cib": c, "url": url}
+                new_game = enrich_with_change(new_game, existing.get(title))
+                final_data[system].append(new_game)
         final_data[system] = sorted(final_data[system], key=lambda x: x["title"].lower())
     return final_data
 
@@ -93,9 +122,13 @@ def full_fetch(data):
         final_data[system] = []
         for game in games:
             title = game["title"]
+            old_loose = game.get("loose")
+            old_cib = game.get("cib")
             time.sleep(0.5)
             l, c, url = get_market_price(system, title)
-            final_data[system].append({"title": title, "loose": l, "cib": c, "url": url})
+            new_game = {"title": title, "loose": l, "cib": c, "url": url}
+            new_game = enrich_with_change(new_game, {"loose": old_loose, "cib": old_cib})
+            final_data[system].append(new_game)
         final_data[system] = sorted(final_data[system], key=lambda x: x["title"].lower())
     return final_data
 
@@ -180,9 +213,13 @@ HTML_TEMPLATE = """
         .game-title { font-weight: 600; color: var(--text); font-size: 14px; background: none; border: none; outline: none; width: 100%; font-family: "DM Sans", sans-serif; padding: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .game-title:focus { color: var(--red); }
         .price-box { text-align: right; flex-shrink: 0; }
+        .price-link { text-decoration: none; display: block; }
         .loose { color: var(--green); font-weight: 600; font-size: 14px; display: block; }
         .cib { color: var(--red); font-weight: 700; font-size: 14px; display: block; margin-top: 2px; }
         .price-label { font-size: 10px; color: #bbb; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px; }
+        .change { font-size: 10px; font-weight: 600; margin-left: 4px; }
+        .change.up { color: var(--green); }
+        .change.down { color: var(--red); }
         .na-link { color: #bbb; font-size: 11px; display: block; margin-top: 3px; text-decoration: underline; }
         .del-btn { background: none; border: none; color: #ccc; font-size: 20px; cursor: pointer; padding: 0 0 0 4px; line-height: 1; flex-shrink: 0; font-weight: 300; }
         .del-btn:active { color: #e53935; }
@@ -230,12 +267,26 @@ Snatcher"></textarea>
                         </div>
                         <div class="price-box">
                             {% if game.loose == "N/A" %}
-                                <span class="loose"><span class="price-label">L</span>N/A</span>
-                                <span class="cib"><span class="price-label">CIB</span>N/A</span>
-                                <a class="na-link" href="{{ game.url }}" target="_blank">Search PriceCharting</a>
+                                <a class="na-link" href="{{ game.url }}" target="_blank">N/A — Search PriceCharting</a>
                             {% else %}
-                                <span class="loose"><span class="price-label">L</span>{{ game.loose }}</span>
-                                <span class="cib"><span class="price-label">CIB</span>{{ game.cib }}</span>
+                                <a class="price-link" href="{{ game.url }}" target="_blank">
+                                    <span class="loose">
+                                        <span class="price-label">L</span>{{ game.loose }}
+                                        {% if game.loose_change %}
+                                            <span class="change {{ 'up' if game.loose_change > 0 else 'down' }}">
+                                                {{ '↑' if game.loose_change > 0 else '↓' }}{{ game.loose_change|abs }}%
+                                            </span>
+                                        {% endif %}
+                                    </span>
+                                    <span class="cib">
+                                        <span class="price-label">CIB</span>{{ game.cib }}
+                                        {% if game.cib_change %}
+                                            <span class="change {{ 'up' if game.cib_change > 0 else 'down' }}">
+                                                {{ '↑' if game.cib_change > 0 else '↓' }}{{ game.cib_change|abs }}%
+                                            </span>
+                                        {% endif %}
+                                    </span>
+                                </a>
                             {% endif %}
                         </div>
                         <button class="del-btn" onclick="deleteGame(this)">&#10005;</button>
@@ -321,6 +372,13 @@ Snatcher"></textarea>
             document.getElementById("spinner").style.display = "none";
         }
 
+        function changeHtml(val) {
+            if (!val) return "";
+            const cls = val > 0 ? "up" : "down";
+            const arrow = val > 0 ? "↑" : "↓";
+            return "<span class='change " + cls + "'>" + arrow + Math.abs(val) + "%</span>";
+        }
+
         function renderResults(data, updated) {
             let html = "";
             for (const [system, games] of Object.entries(data)) {
@@ -330,9 +388,12 @@ Snatcher"></textarea>
                 for (const game of games) {
                     let priceHtml = "";
                     if (game.loose === "N/A") {
-                        priceHtml = "<span class='loose'><span class='price-label'>L</span>N/A</span><span class='cib'><span class='price-label'>CIB</span>N/A</span><a class='na-link' href='" + game.url + "' target='_blank'>Search PriceCharting</a>";
+                        priceHtml = "<a class='na-link' href='" + game.url + "' target='_blank'>N/A — Search PriceCharting</a>";
                     } else {
-                        priceHtml = "<span class='loose'><span class='price-label'>L</span>" + game.loose + "</span><span class='cib'><span class='price-label'>CIB</span>" + game.cib + "</span>";
+                        priceHtml = "<a class='price-link' href='" + game.url + "' target='_blank'>" +
+                            "<span class='loose'><span class='price-label'>L</span>" + game.loose + changeHtml(game.loose_change) + "</span>" +
+                            "<span class='cib'><span class='price-label'>CIB</span>" + game.cib + changeHtml(game.cib_change) + "</span>" +
+                            "</a>";
                     }
                     html += "<div class='game-row' data-title='" + game.title.replace(/'/g, "&#39;") + "'>";
                     html += "<div class='game-title-wrap'><input class='game-title' type='text' value='" + game.title.replace(/'/g, "&#39;") + "' onchange='titleChanged(this)' /></div>";
