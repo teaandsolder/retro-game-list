@@ -89,10 +89,8 @@ def get_market_price(system, title):
 def enrich_with_change(new_game, old_game):
     if not old_game:
         return new_game
-    loose_change = calc_change(old_game.get("loose"), new_game.get("loose"))
-    cib_change = calc_change(old_game.get("cib"), new_game.get("cib"))
-    new_game["loose_change"] = loose_change
-    new_game["cib_change"] = cib_change
+    new_game["loose_change"] = calc_change(old_game.get("loose"), new_game.get("loose"))
+    new_game["cib_change"] = calc_change(old_game.get("cib"), new_game.get("cib"))
     return new_game
 
 def smart_fetch(current_data, saved_data):
@@ -188,18 +186,12 @@ HTML_TEMPLATE = """
         .header p { font-size: 12px; color: var(--subtext); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
 
         .action-bar { display: flex; gap: 8px; margin-bottom: 10px; }
-        .btn {
-            border: none; padding: 11px 18px; border-radius: 8px;
-            font-family: "DM Sans", sans-serif; font-weight: 600; font-size: 13px;
-            cursor: pointer; white-space: nowrap; flex: 1;
-            background: var(--dark); color: white;
-        }
-        .btn-outline {
-            background: white; color: var(--dark);
-            border: 1.5px solid #ccc;
-        }
+        .btn { border: 1.5px solid #ccc; padding: 11px 18px; border-radius: 8px; font-family: "DM Sans", sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap; flex: 1; background: white; color: var(--dark); }
         .btn:active { opacity: 0.7; }
         .btn:disabled { opacity: 0.4; }
+        .btn-red { background: var(--red); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-family: "DM Sans", sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; }
+        .btn-red:active { opacity: 0.7; }
+        .btn-red:disabled { opacity: 0.4; }
 
         .import-toggle { text-align: center; margin-bottom: 6px; }
         .import-toggle button { background: none; border: none; color: #aaa; font-size: 12px; font-family: "DM Sans", sans-serif; cursor: pointer; text-decoration: underline; padding: 4px; }
@@ -211,9 +203,6 @@ HTML_TEMPLATE = """
         textarea:focus { border-color: var(--red); background: #fff; }
         textarea::placeholder { color: #bbb; line-height: 1.6; }
         .import-btn-row { display: flex; justify-content: flex-end; }
-        .btn-red { background: var(--red); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-family: "DM Sans", sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; }
-        .btn-red:active { opacity: 0.7; }
-        .btn-red:disabled { opacity: 0.4; }
 
         .last-updated { text-align: center; font-size: 11px; color: #aaa; margin-bottom: 22px; letter-spacing: 0.5px; }
         .spinner { display: none; text-align: center; padding: 20px; font-size: 13px; color: var(--subtext); }
@@ -226,22 +215,27 @@ HTML_TEMPLATE = """
         .system-body { display: none; }
         .system-body.open { display: block; }
 
-        .game-row { display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--border); gap: 10px; }
+        .game-row { display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--border); gap: 8px; }
         .game-row:last-of-type { border-bottom: none; }
         .game-title-wrap { flex: 1; min-width: 0; }
         .game-title { font-weight: 600; color: var(--text); font-size: 14px; background: none; border: none; outline: none; width: 100%; font-family: "DM Sans", sans-serif; padding: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .game-title:focus { color: var(--red); }
 
-        .price-box { text-align: right; flex-shrink: 0; min-width: 110px; }
+        .price-box { flex-shrink: 0; }
         .price-link { text-decoration: none; display: block; }
-        .price-row { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
-        .loose { color: var(--green); font-weight: 600; font-size: 14px; }
-        .cib { color: var(--red); font-weight: 700; font-size: 14px; }
-        .price-label { font-size: 10px; color: #bbb; text-transform: uppercase; letter-spacing: 0.5px; }
-        .change { font-size: 10px; font-weight: 600; min-width: 36px; text-align: left; }
+
+        .price-row { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-bottom: 2px; }
+        .price-row:last-child { margin-bottom: 0; }
+
+        .change { font-size: 10px; font-weight: 600; min-width: 38px; text-align: right; }
         .change.up { color: var(--green); }
         .change.down { color: var(--red); }
-        .na-link { color: #bbb; font-size: 11px; display: block; text-decoration: underline; }
+
+        .price-label { font-size: 10px; color: #bbb; text-transform: uppercase; letter-spacing: 0.5px; width: 20px; text-align: right; }
+        .loose { color: var(--green); font-weight: 600; font-size: 14px; min-width: 70px; text-align: right; }
+        .cib { color: var(--red); font-weight: 700; font-size: 14px; min-width: 70px; text-align: right; }
+
+        .na-link { color: #bbb; font-size: 11px; display: block; text-decoration: underline; text-align: right; }
 
         .del-btn { background: none; border: none; color: #ccc; font-size: 20px; cursor: pointer; padding: 0 0 0 4px; line-height: 1; flex-shrink: 0; font-weight: 300; }
         .del-btn:active { color: #e53935; }
@@ -260,8 +254,8 @@ HTML_TEMPLATE = """
         </div>
 
         <div class="action-bar">
-            <button class="btn btn-outline" id="updateBtn" onclick="updatePrices()">Update</button>
-            <button class="btn btn-outline" id="updateAllBtn" onclick="confirmUpdateAll()">Update All</button>
+            <button class="btn" id="updateBtn" onclick="updatePrices()">Update</button>
+            <button class="btn" id="updateAllBtn" onclick="confirmUpdateAll()">Update All</button>
         </div>
 
         <div class="import-toggle">
@@ -304,18 +298,14 @@ Snatcher"></textarea>
                             {% else %}
                                 <a class="price-link" href="{{ game.url }}" target="_blank">
                                     <div class="price-row">
+                                        <span class="change {{ 'up' if game.loose_change and game.loose_change > 0 else 'down' if game.loose_change and game.loose_change < 0 else '' }}">{% if game.loose_change %}{{ '↑' if game.loose_change > 0 else '↓' }}{{ game.loose_change|abs }}%{% endif %}</span>
                                         <span class="price-label">L</span>
                                         <span class="loose">{{ game.loose }}</span>
-                                        <span class="change {{ 'up' if game.loose_change and game.loose_change > 0 else 'down' if game.loose_change and game.loose_change < 0 else '' }}">
-                                            {% if game.loose_change %}{{ '↑' if game.loose_change > 0 else '↓' }}{{ game.loose_change|abs }}%{% endif %}
-                                        </span>
                                     </div>
                                     <div class="price-row">
+                                        <span class="change {{ 'up' if game.cib_change and game.cib_change > 0 else 'down' if game.cib_change and game.cib_change < 0 else '' }}">{% if game.cib_change %}{{ '↑' if game.cib_change > 0 else '↓' }}{{ game.cib_change|abs }}%{% endif %}</span>
                                         <span class="price-label">CIB</span>
                                         <span class="cib">{{ game.cib }}</span>
-                                        <span class="change {{ 'up' if game.cib_change and game.cib_change > 0 else 'down' if game.cib_change and game.cib_change < 0 else '' }}">
-                                            {% if game.cib_change %}{{ '↑' if game.cib_change > 0 else '↓' }}{{ game.cib_change|abs }}%{% endif %}
-                                        </span>
                                     </div>
                                 </a>
                             {% endif %}
@@ -377,7 +367,7 @@ Snatcher"></textarea>
             const newRow = document.createElement("div");
             newRow.className = "game-row";
             newRow.dataset.title = title;
-            newRow.innerHTML = "<div class='game-title-wrap'><input class='game-title' type='text' value='" + title.replace(/'/g, "&#39;") + "' onchange='titleChanged(this)' /></div><div class='price-box'><div class='price-row'><span class='price-label'>L</span><span class='loose'>-</span><span class='change'></span></div><div class='price-row'><span class='price-label'>CIB</span><span class='cib'>-</span><span class='change'></span></div></div><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>";
+            newRow.innerHTML = "<div class='game-title-wrap'><input class='game-title' type='text' value='" + title.replace(/'/g, "&#39;") + "' onchange='titleChanged(this)' /></div><div class='price-box'><div class='price-row'><span class='change'></span><span class='price-label'>L</span><span class='loose'>-</span></div><div class='price-row'><span class='change'></span><span class='price-label'>CIB</span><span class='cib'>-</span></div></div><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>";
             systemBody.insertBefore(newRow, addRow);
             input.value = "";
             saveList();
@@ -426,8 +416,8 @@ Snatcher"></textarea>
                         priceHtml = "<a class='na-link' href='" + game.url + "' target='_blank'>N/A — Search</a>";
                     } else {
                         priceHtml = "<a class='price-link' href='" + game.url + "' target='_blank'>" +
-                            "<div class='price-row'><span class='price-label'>L</span><span class='loose'>" + game.loose + "</span>" + changeHtml(game.loose_change) + "</div>" +
-                            "<div class='price-row'><span class='price-label'>CIB</span><span class='cib'>" + game.cib + "</span>" + changeHtml(game.cib_change) + "</div>" +
+                            "<div class='price-row'>" + changeHtml(game.loose_change) + "<span class='price-label'>L</span><span class='loose'>" + game.loose + "</span></div>" +
+                            "<div class='price-row'>" + changeHtml(game.cib_change) + "<span class='price-label'>CIB</span><span class='cib'>" + game.cib + "</span></div>" +
                             "</a>";
                     }
                     html += "<div class='game-row' data-title='" + game.title.replace(/'/g, "&#39;") + "'>";
