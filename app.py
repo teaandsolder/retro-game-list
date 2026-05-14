@@ -217,10 +217,9 @@ HTML_TEMPLATE = """
         .price-box { flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
         .price-link { text-decoration: none; display: block; }
         .price-col { display: flex; flex-direction: column; align-items: flex-end; }
-        .price-row { display: flex; align-items: center; justify-content: flex-end; margin-bottom: 2px; }
-        .price-row:last-child { margin-bottom: 0; }
+        .price-row { display: flex; align-items: center; justify-content: flex-end; height: 22px; }
         .change-col { display: flex; flex-direction: column; align-items: flex-end; min-width: 38px; }
-        .change { font-size: 10px; font-weight: 600; line-height: 1.6; }
+        .change { font-size: 10px; font-weight: 600; height: 22px; display: flex; align-items: center; justify-content: flex-end; }
         .change.up { color: var(--green); }
         .change.down { color: var(--red); }
         .price-label { font-size: 10px; color: #bbb; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 3px; }
