@@ -668,6 +668,7 @@ function addCollectionItem(item) {
 }
 
 function deleteCollectionItem(btn) {
+  if (!confirm("Remove this game from your collection?")) return;
   btn.closest(".coll-row").remove();
   saveList();
 }
