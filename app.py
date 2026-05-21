@@ -67,13 +67,117 @@ def calc_profit(paid_str, market_str):
 
 def get_market_price(system, title):
     sys_map = {
-        "NES": "nes", "SNES": "super-nintendo", "N64": "nintendo-64",
-        "GAMEBOY": "gameboy", "GAMEBOY COLOR": "gameboy-color",
-        "SEGA MASTER SYSTEM": "sega-master-system", "SEGA GENESIS": "sega-genesis",
-        "SEGA CD": "sega-cd", "SEGA GAME GEAR": "sega-game-gear",
-        "PS1": "playstation", "PS2": "playstation-2",
-        "NEO GEO AES": "neo-geo-aes", "3DO": "3do",
-        "ATARI JAGUAR": "atari-jaguar", "PC ENGINE": "pc-engine"
+        # Nintendo
+        "NES": "nes",
+        "SNES": "super-nintendo",
+        "N64": "nintendo-64",
+        "GAMECUBE": "gamecube",
+        "WII": "wii",
+        "WII U": "wii-u",
+        "GAMEBOY": "gameboy",
+        "GAME BOY": "gameboy",
+        "GAMEBOY COLOR": "gameboy-color",
+        "GAME BOY COLOR": "gameboy-color",
+        "GBC": "gameboy-color",
+        "GAMEBOY ADVANCE": "gameboy-advance",
+        "GAME BOY ADVANCE": "gameboy-advance",
+        "GBA": "gameboy-advance",
+        "GAMEBOY ADVANCE SP": "gameboy-advance",
+        "DS": "nintendo-ds",
+        "NINTENDO DS": "nintendo-ds",
+        "DSI": "nintendo-dsi",
+        "3DS": "nintendo-3ds",
+        "VIRTUAL BOY": "virtual-boy",
+        # Sony
+        "PS1": "playstation",
+        "PSX": "playstation",
+        "PLAYSTATION": "playstation",
+        "PS2": "playstation-2",
+        "PLAYSTATION 2": "playstation-2",
+        "PS3": "playstation-3",
+        "PLAYSTATION 3": "playstation-3",
+        "PS4": "playstation-4",
+        "PLAYSTATION 4": "playstation-4",
+        "PSP": "psp",
+        "PS VITA": "ps-vita",
+        "PSVITA": "ps-vita",
+        # Sega
+        "SEGA MASTER SYSTEM": "sega-master-system",
+        "MASTER SYSTEM": "sega-master-system",
+        "SEGA GENESIS": "sega-genesis",
+        "GENESIS": "sega-genesis",
+        "MEGA DRIVE": "sega-genesis",
+        "SEGA MEGA DRIVE": "sega-genesis",
+        "SEGA CD": "sega-cd",
+        "MEGA CD": "sega-cd",
+        "SEGA 32X": "sega-32x",
+        "32X": "sega-32x",
+        "SEGA SATURN": "sega-saturn",
+        "SATURN": "sega-saturn",
+        "SEGA DREAMCAST": "sega-dreamcast",
+        "DREAMCAST": "sega-dreamcast",
+        "SEGA GAME GEAR": "sega-game-gear",
+        "GAME GEAR": "sega-game-gear",
+        "SEGA PICO": "sega-pico",
+        # NEC
+        "PC ENGINE": "pc-engine",
+        "TURBOGRAFX-16": "turbografx-16",
+        "TURBOGRAFX 16": "turbografx-16",
+        "TURBOGRAFX": "turbografx-16",
+        "PC ENGINE CD": "turbografx-cd",
+        "TURBOGRAFX CD": "turbografx-cd",
+        "PC-FX": "pc-fx",
+        # SNK
+        "NEO GEO AES": "neo-geo-aes",
+        "NEO GEO": "neo-geo-aes",
+        "NEO GEO MVS": "neo-geo-mvs",
+        "NEO GEO CD": "neo-geo-cd",
+        "NEO GEO POCKET": "neo-geo-pocket",
+        "NEO GEO POCKET COLOR": "neo-geo-pocket-color",
+        "NGPC": "neo-geo-pocket-color",
+        # Atari
+        "ATARI 2600": "atari-2600",
+        "2600": "atari-2600",
+        "ATARI 5200": "atari-5200",
+        "ATARI 7800": "atari-7800",
+        "ATARI JAGUAR": "atari-jaguar",
+        "JAGUAR": "atari-jaguar",
+        "ATARI JAGUAR CD": "atari-jaguar-cd",
+        "ATARI LYNX": "atari-lynx",
+        "LYNX": "atari-lynx",
+        "ATARI ST": "atari-st",
+        "ATARI 400": "atari-400",
+        "ATARI 800": "atari-800",
+        # Microsoft
+        "XBOX": "xbox",
+        "XBOX 360": "xbox-360",
+        "XBOX ONE": "xbox-one",
+        # 3DO
+        "3DO": "3do",
+        # Philips
+        "CDI": "philips-cdi",
+        "PHILIPS CDI": "philips-cdi",
+        # Commodore
+        "COMMODORE 64": "commodore-64",
+        "C64": "commodore-64",
+        "AMIGA": "amiga",
+        "AMIGA CD32": "amiga-cd32",
+        "CD32": "amiga-cd32",
+        # Coleco
+        "COLECOVISION": "colecovision",
+        # Mattel
+        "INTELLIVISION": "intellivision",
+        # Magnavox
+        "ODYSSEY 2": "odyssey-2",
+        # Vectrex
+        "VECTREX": "vectrex",
+        # Bandai
+        "WONDERSWAN": "wonderswan",
+        "WONDERSWAN COLOR": "wonderswan-color",
+        # PC
+        "PC": "pc",
+        "DOS": "dos",
+        "WINDOWS": "windows",
     }
     sys_key = system.upper().strip()
     sys_slug = sys_map.get(sys_key, sys_key.lower().replace(" ", "-"))
@@ -446,17 +550,14 @@ textarea::placeholder { color: #bbb; line-height: 1.6; }
 
 <script>
 function toggleImport() { document.getElementById("importCard").classList.toggle("open"); }
-
 function toggleSystem(header) {
   header.classList.toggle("open");
   header.nextElementSibling.classList.toggle("open");
 }
-
 function toggleCollection(header) {
   header.classList.toggle("open");
   document.getElementById("collectionBody").classList.toggle("open");
 }
-
 function getSystemData() {
   const data = {};
   document.querySelectorAll(".system-card").forEach(card => {
@@ -469,17 +570,14 @@ function getSystemData() {
   });
   return data;
 }
-
 function titleChanged(input) {
   input.closest(".game-row").dataset.title = input.value;
   saveList();
 }
-
 function deleteGame(btn) {
   btn.closest(".game-row").remove();
   saveList();
 }
-
 function addGame(btn) {
   const addRow = btn.closest(".add-row");
   const input = addRow.querySelector(".add-input");
@@ -496,7 +594,6 @@ function addGame(btn) {
   input.value = "";
   saveList();
 }
-
 function saveList() {
   const data = getSystemData();
   const collection = getCollectionData();
@@ -506,26 +603,22 @@ function saveList() {
     body: JSON.stringify({data, collection})
   });
 }
-
 function setLoading(msg) {
   ["fetchBtn","updateBtn","updateAllBtn"].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = true; });
   const s = document.getElementById("spinner");
   s.style.display = "block";
   s.textContent = msg;
 }
-
 function clearLoading() {
   ["fetchBtn","updateBtn","updateAllBtn"].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = false; });
   document.getElementById("spinner").style.display = "none";
 }
-
 function changeHtml(val) {
   if (!val) return "<span class='change'></span>";
   const cls = val > 0 ? "up" : "down";
   const arrow = val > 0 ? "↑" : "↓";
   return `<span class='change ${cls}'>${arrow}${Math.abs(val)}%</span>`;
 }
-
 function renderResults(data, updated) {
   let html = "";
   for (const [system, games] of Object.entries(data)) {
@@ -553,7 +646,6 @@ function renderResults(data, updated) {
   document.getElementById("results").innerHTML = html;
   document.getElementById("lastUpdated").textContent = "Last updated: " + updated;
 }
-
 function fetchPrices() {
   const input = document.getElementById("gameInput").value.trim();
   if (!input) return;
@@ -563,7 +655,6 @@ function fetchPrices() {
     .then(res => { clearLoading(); renderResults(res.data, res.updated); document.getElementById("gameInput").value = ""; document.getElementById("importCard").classList.remove("open"); })
     .catch(() => clearLoading());
 }
-
 function updatePrices() {
   const data = getSystemData();
   setLoading("Fetching new prices only...");
@@ -572,7 +663,6 @@ function updatePrices() {
     .then(res => { clearLoading(); renderResults(res.data, res.updated); })
     .catch(() => clearLoading());
 }
-
 function confirmUpdateAll() {
   if (confirm("Update All re-fetches every game and can take several minutes. Continue?")) {
     setLoading("Refreshing all prices, please wait...");
@@ -582,9 +672,7 @@ function confirmUpdateAll() {
       .catch(() => clearLoading());
   }
 }
-
 let _buyRow = null;
-
 function openBuyModal(btn, title, system, loose, cib) {
   _buyRow = btn.closest(".game-row");
   document.getElementById("buyModalName").textContent = title + " (" + system + ")";
@@ -595,12 +683,10 @@ function openBuyModal(btn, title, system, loose, cib) {
   document.getElementById("buyModalPaid").value = "";
   document.getElementById("buyModal").classList.add("open");
 }
-
 function closeBuyModal() {
   document.getElementById("buyModal").classList.remove("open");
   _buyRow = null;
 }
-
 function confirmBuy() {
   const title = document.getElementById("buyModalTitle").value;
   const system = document.getElementById("buyModalSystem").value;
@@ -613,7 +699,6 @@ function confirmBuy() {
   if (_buyRow) { _buyRow.remove(); saveList(); }
   closeBuyModal();
 }
-
 function openAddCollectionModal() {
   const titleInput = document.getElementById("collAddInput");
   document.getElementById("addCollTitle").value = titleInput.value.trim();
@@ -622,11 +707,9 @@ function openAddCollectionModal() {
   document.getElementById("addCollPaid").value = "";
   document.getElementById("addCollModal").classList.add("open");
 }
-
 function closeAddCollModal() {
   document.getElementById("addCollModal").classList.remove("open");
 }
-
 function confirmAddCollection() {
   const title = document.getElementById("addCollTitle").value.trim();
   const system = document.getElementById("addCollSystem").value.trim();
@@ -644,7 +727,6 @@ function confirmAddCollection() {
     })
     .catch(() => { clearLoading(); addCollectionItem({title, system, paid: "$" + parseFloat(paid).toFixed(2), condition, loose: null, cib: null, id: Date.now().toString()}); closeAddCollModal(); saveList(); });
 }
-
 function addCollectionItem(item) {
   const body = document.getElementById("collectionBody");
   const addRow = body.querySelector(".coll-add-row");
@@ -666,13 +748,11 @@ function addCollectionItem(item) {
   document.querySelector(".collection-header").classList.add("open");
   document.getElementById("collectionBody").classList.add("open");
 }
-
 function deleteCollectionItem(btn) {
   if (!confirm("Remove this game from your collection?")) return;
   btn.closest(".coll-row").remove();
   saveList();
 }
-
 function getCollectionData() {
   const items = [];
   document.querySelectorAll(".coll-row").forEach(row => {
@@ -687,7 +767,6 @@ function getCollectionData() {
   });
   return items;
 }
-
 function renderCollection(collection) {
   if (!collection) return;
   const body = document.getElementById("collectionBody");
