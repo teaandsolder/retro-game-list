@@ -57,127 +57,48 @@ def calc_change(old_str, new_str):
         return None
     return round(pct, 1)
 
-def calc_profit(paid_str, market_str):
-    paid = parse_price(paid_str)
-    market = parse_price(market_str)
-    if paid is None or market is None:
-        return None, None
-    diff = market - paid
-    return round(diff, 2), round((diff / paid) * 100, 1) if paid != 0 else None
-
 def get_market_price(system, title):
     sys_map = {
-        # Nintendo
-        "NES": "nes",
-        "SNES": "super-nintendo",
-        "N64": "nintendo-64",
-        "GAMECUBE": "gamecube",
-        "WII": "wii",
-        "WII U": "wii-u",
-        "GAMEBOY": "gameboy",
-        "GAME BOY": "gameboy",
-        "GAMEBOY COLOR": "gameboy-color",
-        "GAME BOY COLOR": "gameboy-color",
-        "GBC": "gameboy-color",
-        "GAMEBOY ADVANCE": "gameboy-advance",
-        "GAME BOY ADVANCE": "gameboy-advance",
-        "GBA": "gameboy-advance",
-        "GAMEBOY ADVANCE SP": "gameboy-advance",
-        "DS": "nintendo-ds",
-        "NINTENDO DS": "nintendo-ds",
-        "DSI": "nintendo-dsi",
-        "3DS": "nintendo-3ds",
-        "VIRTUAL BOY": "virtual-boy",
-        # Sony
-        "PS1": "playstation",
-        "PSX": "playstation",
-        "PLAYSTATION": "playstation",
-        "PS2": "playstation-2",
-        "PLAYSTATION 2": "playstation-2",
-        "PS3": "playstation-3",
-        "PLAYSTATION 3": "playstation-3",
-        "PS4": "playstation-4",
-        "PLAYSTATION 4": "playstation-4",
-        "PSP": "psp",
-        "PS VITA": "ps-vita",
-        "PSVITA": "ps-vita",
-        # Sega
-        "SEGA MASTER SYSTEM": "sega-master-system",
-        "MASTER SYSTEM": "sega-master-system",
-        "SEGA GENESIS": "sega-genesis",
-        "GENESIS": "sega-genesis",
-        "MEGA DRIVE": "sega-genesis",
-        "SEGA MEGA DRIVE": "sega-genesis",
-        "SEGA CD": "sega-cd",
-        "MEGA CD": "sega-cd",
-        "SEGA 32X": "sega-32x",
-        "32X": "sega-32x",
-        "SEGA SATURN": "sega-saturn",
-        "SATURN": "sega-saturn",
-        "SEGA DREAMCAST": "sega-dreamcast",
-        "DREAMCAST": "sega-dreamcast",
-        "SEGA GAME GEAR": "sega-game-gear",
-        "GAME GEAR": "sega-game-gear",
+        "NES": "nes", "SNES": "super-nintendo", "N64": "nintendo-64",
+        "GAMECUBE": "gamecube", "WII": "wii", "WII U": "wii-u",
+        "GAMEBOY": "gameboy", "GAME BOY": "gameboy",
+        "GAMEBOY COLOR": "gameboy-color", "GAME BOY COLOR": "gameboy-color", "GBC": "gameboy-color",
+        "GAMEBOY ADVANCE": "gameboy-advance", "GAME BOY ADVANCE": "gameboy-advance", "GBA": "gameboy-advance",
+        "GAMEBOY ADVANCE SP": "gameboy-advance", "DS": "nintendo-ds", "NINTENDO DS": "nintendo-ds",
+        "DSI": "nintendo-dsi", "3DS": "nintendo-3ds", "VIRTUAL BOY": "virtual-boy",
+        "PS1": "playstation", "PSX": "playstation", "PLAYSTATION": "playstation",
+        "PS2": "playstation-2", "PLAYSTATION 2": "playstation-2",
+        "PS3": "playstation-3", "PLAYSTATION 3": "playstation-3",
+        "PS4": "playstation-4", "PLAYSTATION 4": "playstation-4",
+        "PSP": "psp", "PS VITA": "ps-vita", "PSVITA": "ps-vita",
+        "SEGA MASTER SYSTEM": "sega-master-system", "MASTER SYSTEM": "sega-master-system",
+        "SEGA GENESIS": "sega-genesis", "GENESIS": "sega-genesis",
+        "MEGA DRIVE": "sega-genesis", "SEGA MEGA DRIVE": "sega-genesis",
+        "SEGA CD": "sega-cd", "MEGA CD": "sega-cd",
+        "SEGA 32X": "sega-32x", "32X": "sega-32x",
+        "SEGA SATURN": "sega-saturn", "SATURN": "sega-saturn",
+        "SEGA DREAMCAST": "sega-dreamcast", "DREAMCAST": "sega-dreamcast",
+        "SEGA GAME GEAR": "sega-game-gear", "GAME GEAR": "sega-game-gear",
         "SEGA PICO": "sega-pico",
-        # NEC
-        "PC ENGINE": "pc-engine",
-        "TURBOGRAFX-16": "turbografx-16",
-        "TURBOGRAFX 16": "turbografx-16",
-        "TURBOGRAFX": "turbografx-16",
-        "PC ENGINE CD": "turbografx-cd",
-        "TURBOGRAFX CD": "turbografx-cd",
-        "PC-FX": "pc-fx",
-        # SNK
-        "NEO GEO AES": "neo-geo-aes",
-        "NEO GEO": "neo-geo-aes",
-        "NEO GEO MVS": "neo-geo-mvs",
-        "NEO GEO CD": "neo-geo-cd",
-        "NEO GEO POCKET": "neo-geo-pocket",
-        "NEO GEO POCKET COLOR": "neo-geo-pocket-color",
-        "NGPC": "neo-geo-pocket-color",
-        # Atari
-        "ATARI 2600": "atari-2600",
-        "2600": "atari-2600",
-        "ATARI 5200": "atari-5200",
-        "ATARI 7800": "atari-7800",
-        "ATARI JAGUAR": "atari-jaguar",
-        "JAGUAR": "atari-jaguar",
-        "ATARI JAGUAR CD": "atari-jaguar-cd",
-        "ATARI LYNX": "atari-lynx",
-        "LYNX": "atari-lynx",
-        "ATARI ST": "atari-st",
-        "ATARI 400": "atari-400",
-        "ATARI 800": "atari-800",
-        # Microsoft
-        "XBOX": "xbox",
-        "XBOX 360": "xbox-360",
-        "XBOX ONE": "xbox-one",
-        # 3DO
-        "3DO": "3do",
-        # Philips
-        "CDI": "philips-cdi",
-        "PHILIPS CDI": "philips-cdi",
-        # Commodore
-        "COMMODORE 64": "commodore-64",
-        "C64": "commodore-64",
-        "AMIGA": "amiga",
-        "AMIGA CD32": "amiga-cd32",
-        "CD32": "amiga-cd32",
-        # Coleco
-        "COLECOVISION": "colecovision",
-        # Mattel
-        "INTELLIVISION": "intellivision",
-        # Magnavox
-        "ODYSSEY 2": "odyssey-2",
-        # Vectrex
-        "VECTREX": "vectrex",
-        # Bandai
-        "WONDERSWAN": "wonderswan",
-        "WONDERSWAN COLOR": "wonderswan-color",
-        # PC
-        "PC": "pc",
-        "DOS": "dos",
-        "WINDOWS": "windows",
+        "PC ENGINE": "pc-engine", "TURBOGRAFX-16": "turbografx-16",
+        "TURBOGRAFX 16": "turbografx-16", "TURBOGRAFX": "turbografx-16",
+        "PC ENGINE CD": "turbografx-cd", "TURBOGRAFX CD": "turbografx-cd", "PC-FX": "pc-fx",
+        "NEO GEO AES": "neo-geo-aes", "NEO GEO": "neo-geo-aes",
+        "NEO GEO MVS": "neo-geo-mvs", "NEO GEO CD": "neo-geo-cd",
+        "NEO GEO POCKET": "neo-geo-pocket", "NEO GEO POCKET COLOR": "neo-geo-pocket-color", "NGPC": "neo-geo-pocket-color",
+        "ATARI 2600": "atari-2600", "2600": "atari-2600",
+        "ATARI 5200": "atari-5200", "ATARI 7800": "atari-7800",
+        "ATARI JAGUAR": "atari-jaguar", "JAGUAR": "atari-jaguar",
+        "ATARI JAGUAR CD": "atari-jaguar-cd", "ATARI LYNX": "atari-lynx", "LYNX": "atari-lynx",
+        "ATARI ST": "atari-st", "ATARI 400": "atari-400", "ATARI 800": "atari-800",
+        "XBOX": "xbox", "XBOX 360": "xbox-360", "XBOX ONE": "xbox-one",
+        "3DO": "3do", "CDI": "philips-cdi", "PHILIPS CDI": "philips-cdi",
+        "COMMODORE 64": "commodore-64", "C64": "commodore-64",
+        "AMIGA": "amiga", "AMIGA CD32": "amiga-cd32", "CD32": "amiga-cd32",
+        "COLECOVISION": "colecovision", "INTELLIVISION": "intellivision",
+        "ODYSSEY 2": "odyssey-2", "VECTREX": "vectrex",
+        "WONDERSWAN": "wonderswan", "WONDERSWAN COLOR": "wonderswan-color",
+        "PC": "pc", "DOS": "dos", "WINDOWS": "windows",
     }
     sys_key = system.upper().strip()
     sys_slug = sys_map.get(sys_key, sys_key.lower().replace(" ", "-"))
@@ -338,8 +259,8 @@ textarea::placeholder { color: #bbb; line-height: 1.6; }
 .game-row { display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--border); gap: 8px; }
 .game-row:last-of-type { border-bottom: none; }
 .game-title-wrap { flex: 1; min-width: 0; }
-.game-title { font-weight: 600; color: var(--text); font-size: 14px; background: none; border: none; outline: none; width: 100%; font-family: "DM Sans", sans-serif; padding: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.game-title:focus { color: var(--red); }
+.game-title { font-weight: 600; color: var(--text); font-size: 14px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.game-title:active { color: var(--red); }
 .price-box { flex-shrink: 0; display: flex; align-items: center; gap: 6px; }
 .price-link { text-decoration: none; display: block; }
 .price-col { display: flex; flex-direction: column; align-items: flex-end; }
@@ -371,7 +292,8 @@ textarea::placeholder { color: #bbb; line-height: 1.6; }
 .coll-row { display: flex; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--border); gap: 8px; }
 .coll-row:last-of-type { border-bottom: none; }
 .coll-title-wrap { flex: 1; min-width: 0; }
-.coll-title { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.coll-title { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); cursor: pointer; }
+.coll-title:active { color: var(--gold-light); }
 .coll-system { font-size: 10px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 1px; }
 .coll-prices { flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .coll-paid { font-size: 11px; color: var(--subtext); }
@@ -436,9 +358,9 @@ textarea::placeholder { color: #bbb; line-height: 1.6; }
         </div>
         <div class="system-body">
           {% for game in games %}
-          <div class="game-row" data-title="{{ game.title }}">
+          <div class="game-row" data-title="{{ game.title }}" data-url="{{ game.url }}">
             <div class="game-title-wrap">
-              <input class="game-title" type="text" value="{{ game.title }}" onchange="titleChanged(this)" />
+              <span class="game-title" onclick="openPriceCharting(this)">{{ game.title }}</span>
             </div>
             <div class="price-box">
               {% if game.loose == "N/A" %}
@@ -480,7 +402,7 @@ textarea::placeholder { color: #bbb; line-height: 1.6; }
       {% for item in collection %}
       <div class="coll-row" data-id="{{ item.id }}">
         <div class="coll-title-wrap">
-          <div class="coll-title">{{ item.title }}</div>
+          <div class="coll-title" onclick="openCollPriceCharting(this)" data-url="{{ item.url }}">{{ item.title }}</div>
           <div class="coll-system">{{ item.system }} &middot; <span class="coll-condition">{{ item.condition }}</span></div>
         </div>
         <div class="coll-prices">
@@ -549,6 +471,25 @@ textarea::placeholder { color: #bbb; line-height: 1.6; }
 </div>
 
 <script>
+function openPriceCharting(el) {
+  const row = el.closest(".game-row");
+  const url = row.dataset.url;
+  const title = el.textContent.trim();
+  if (!url) return;
+  if (confirm("Open " + title + " on PriceCharting?")) {
+    window.open(url, "_blank");
+  }
+}
+
+function openCollPriceCharting(el) {
+  const url = el.dataset.url;
+  const title = el.textContent.trim();
+  if (!url) return;
+  if (confirm("Open " + title + " on PriceCharting?")) {
+    window.open(url, "_blank");
+  }
+}
+
 function toggleImport() { document.getElementById("importCard").classList.toggle("open"); }
 function toggleSystem(header) {
   header.classList.toggle("open");
@@ -564,15 +505,11 @@ function getSystemData() {
     const system = card.dataset.system;
     data[system] = [];
     card.querySelectorAll(".game-row").forEach(row => {
-      const title = row.querySelector(".game-title").value.trim();
+      const title = row.querySelector(".game-title").textContent.trim();
       if (title) data[system].push(title);
     });
   });
   return data;
-}
-function titleChanged(input) {
-  input.closest(".game-row").dataset.title = input.value;
-  saveList();
 }
 function deleteGame(btn) {
   btn.closest(".game-row").remove();
@@ -589,7 +526,8 @@ function addGame(btn) {
   const newRow = document.createElement("div");
   newRow.className = "game-row";
   newRow.dataset.title = title;
-  newRow.innerHTML = `<div class='game-title-wrap'><input class='game-title' type='text' value='${title.replace(/'/g,"&#39;")}' onchange='titleChanged(this)' /></div><div class='price-box'><div class='change-col'><span class='change'></span><span class='change'></span></div><a class='price-link'><div class='price-col'><div class='price-row'><span class='price-label'>L</span><span class='loose'>-</span></div><div class='price-row'><span class='price-label'>CIB</span><span class='cib'>-</span></div></div></a></div><button class='buy-btn' onclick='openBuyModal(this,"${title.replace(/"/g,"&quot;")}","${system.replace(/"/g,"&quot;")}","","")'>✓</button><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>`;
+  newRow.dataset.url = "";
+  newRow.innerHTML = `<div class='game-title-wrap'><span class='game-title' onclick='openPriceCharting(this)'>${title}</span></div><div class='price-box'><div class='change-col'><span class='change'></span><span class='change'></span></div><a class='price-link'><div class='price-col'><div class='price-row'><span class='price-label'>L</span><span class='loose'>-</span></div><div class='price-row'><span class='price-label'>CIB</span><span class='cib'>-</span></div></div></a></div><button class='buy-btn' onclick='openBuyModal(this,"${title.replace(/"/g,"&quot;")}","${system.replace(/"/g,"&quot;")}","","")'>✓</button><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>`;
   systemBody.insertBefore(newRow, addRow);
   input.value = "";
   saveList();
@@ -634,8 +572,9 @@ function renderResults(data, updated) {
       }
       const t = game.title.replace(/'/g,"&#39;").replace(/"/g,"&quot;");
       const s = system.replace(/"/g,"&quot;");
-      html += `<div class='game-row' data-title='${game.title.replace(/'/g,"&#39;")}'>`;
-      html += `<div class='game-title-wrap'><input class='game-title' type='text' value='${t}' onchange='titleChanged(this)' /></div>`;
+      const u = (game.url || "").replace(/"/g,"&quot;");
+      html += `<div class='game-row' data-title='${game.title.replace(/'/g,"&#39;")}' data-url='${u}'>`;
+      html += `<div class='game-title-wrap'><span class='game-title' onclick='openPriceCharting(this)'>${game.title}</span></div>`;
       html += `<div class='price-box'>${priceHtml}</div>`;
       html += `<button class='buy-btn' onclick='openBuyModal(this,"${t}","${s}","${game.loose}","${game.cib}")'>✓</button>`;
       html += `<button class='del-btn' onclick='deleteGame(this)'>&#10005;</button></div>`;
@@ -743,7 +682,7 @@ function addCollectionItem(item) {
   const row = document.createElement("div");
   row.className = "coll-row";
   row.dataset.id = item.id;
-  row.innerHTML = `<div class='coll-title-wrap'><div class='coll-title'>${item.title}</div><div class='coll-system'>${item.system} &middot; <span class='coll-condition'>${item.condition}</span></div></div><div class='coll-prices'><div class='coll-paid'>Paid: ${item.paid}</div><div class='coll-market'>${market||"—"}</div>${diffHtml}</div><button class='del-btn' onclick='deleteCollectionItem(this)'>&#10005;</button>`;
+  row.innerHTML = `<div class='coll-title-wrap'><div class='coll-title' onclick='openCollPriceCharting(this)' data-url='${item.url||""}'>${item.title}</div><div class='coll-system'>${item.system} &middot; <span class='coll-condition'>${item.condition}</span></div></div><div class='coll-prices'><div class='coll-paid'>Paid: ${item.paid}</div><div class='coll-market'>${market||"—"}</div>${diffHtml}</div><button class='del-btn' onclick='deleteCollectionItem(this)'>&#10005;</button>`;
   body.insertBefore(row, addRow);
   document.querySelector(".collection-header").classList.add("open");
   document.getElementById("collectionBody").classList.add("open");
@@ -756,7 +695,8 @@ function deleteCollectionItem(btn) {
 function getCollectionData() {
   const items = [];
   document.querySelectorAll(".coll-row").forEach(row => {
-    const title = row.querySelector(".coll-title")?.textContent.trim();
+    const titleEl = row.querySelector(".coll-title");
+    const title = titleEl?.textContent.trim();
     const systemEl = row.querySelector(".coll-system");
     const systemText = systemEl ? systemEl.textContent.split("·")[0].trim() : "";
     const condition = row.querySelector(".coll-condition")?.textContent.trim();
@@ -786,7 +726,7 @@ function renderCollection(collection) {
     const row = document.createElement("div");
     row.className = "coll-row";
     row.dataset.id = item.id;
-    row.innerHTML = `<div class='coll-title-wrap'><div class='coll-title'>${item.title}</div><div class='coll-system'>${item.system} &middot; <span class='coll-condition'>${item.condition}</span></div></div><div class='coll-prices'><div class='coll-paid'>Paid: ${item.paid}</div><div class='coll-market'>${market||"—"}</div>${diffHtml}</div><button class='del-btn' onclick='deleteCollectionItem(this)'>&#10005;</button>`;
+    row.innerHTML = `<div class='coll-title-wrap'><div class='coll-title' onclick='openCollPriceCharting(this)' data-url='${item.url||""}'>${item.title}</div><div class='coll-system'>${item.system} &middot; <span class='coll-condition'>${item.condition}</span></div></div><div class='coll-prices'><div class='coll-paid'>Paid: ${item.paid}</div><div class='coll-market'>${market||"—"}</div>${diffHtml}</div><button class='del-btn' onclick='deleteCollectionItem(this)'>&#10005;</button>`;
     body.insertBefore(row, addRow);
   });
 }
