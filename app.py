@@ -183,7 +183,8 @@ def parse_list_text(gamelist):
             continue
         if clean.endswith(":"):
             current_system = clean[:-1].strip()
-            data[current_system] = []
+            if current_system not in data:
+                data[current_system] = []
         else:
             if current_system not in data:
                 data[current_system] = []
@@ -281,6 +282,7 @@ textarea::placeholder { color: #bbb; line-height: 1.6; }
 .add-input { flex: 1; border: none; outline: none; font-family: "DM Sans", sans-serif; font-size: 14px; color: var(--text); background: transparent; }
 .add-input::placeholder { color: #bbb; }
 .add-btn { background: none; border: none; color: var(--red); font-size: 22px; cursor: pointer; line-height: 1; padding: 0 4px; font-weight: 300; }
+.fetching-label { font-size: 11px; color: #aaa; font-style: italic; }
 .collection-gap { height: 32px; }
 .collection-card { background: var(--card-bg); border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 16px; overflow: hidden; }
 .collection-header { background: var(--gold); color: #fff8e7; padding: 10px 16px; font-family: "Bebas Neue", sans-serif; font-size: 18px; letter-spacing: 2px; display: flex; align-items: center; gap: 8px; cursor: pointer; }
@@ -480,7 +482,6 @@ function openPriceCharting(el) {
     window.open(url, "_blank");
   }
 }
-
 function openCollPriceCharting(el) {
   const url = el.dataset.url;
   const title = el.textContent.trim();
@@ -489,7 +490,6 @@ function openCollPriceCharting(el) {
     window.open(url, "_blank");
   }
 }
-
 function toggleImport() { document.getElementById("importCard").classList.toggle("open"); }
 function toggleSystem(header) {
   header.classList.toggle("open");
@@ -523,14 +523,41 @@ function addGame(btn) {
   const systemCard = addRow.closest(".system-card");
   const system = systemCard.dataset.system;
   const systemBody = addRow.closest(".system-body");
+  input.value = "";
+
+  // Insert row immediately with fetching indicator
   const newRow = document.createElement("div");
   newRow.className = "game-row";
   newRow.dataset.title = title;
   newRow.dataset.url = "";
-  newRow.innerHTML = `<div class='game-title-wrap'><span class='game-title' onclick='openPriceCharting(this)'>${title}</span></div><div class='price-box'><div class='change-col'><span class='change'></span><span class='change'></span></div><a class='price-link'><div class='price-col'><div class='price-row'><span class='price-label'>L</span><span class='loose'>-</span></div><div class='price-row'><span class='price-label'>CIB</span><span class='cib'>-</span></div></div></a></div><button class='buy-btn' onclick='openBuyModal(this,"${title.replace(/"/g,"&quot;")}","${system.replace(/"/g,"&quot;")}","","")'>✓</button><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>`;
+  newRow.innerHTML = `<div class='game-title-wrap'><span class='game-title' onclick='openPriceCharting(this)'>${title}</span></div><div class='price-box'><span class='fetching-label'>fetching...</span></div><button class='buy-btn' onclick='openBuyModal(this,"${title.replace(/"/g,"&quot;")}","${system.replace(/"/g,"&quot;")}","","")'>✓</button><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>`;
   systemBody.insertBefore(newRow, addRow);
-  input.value = "";
-  saveList();
+
+  // Auto-fetch price
+  fetch("/price_lookup", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({title, system})
+  })
+  .then(r => r.json())
+  .then(res => {
+    newRow.dataset.url = res.url || "";
+    let priceHtml = "";
+    if (res.loose === "N/A") {
+      priceHtml = `<a class='na-link' href='${res.url}' target='_blank'>N/A — Search</a>`;
+    } else {
+      priceHtml = `<div class='change-col'><span class='change'></span><span class='change'></span></div><a class='price-link' href='${res.url}' target='_blank'><div class='price-col'><div class='price-row'><span class='price-label'>L</span><span class='loose'>${res.loose}</span></div><div class='price-row'><span class='price-label'>CIB</span><span class='cib'>${res.cib}</span></div></div></a>`;
+    }
+    newRow.querySelector(".price-box").innerHTML = priceHtml;
+    const t = title.replace(/"/g,"&quot;");
+    const s = system.replace(/"/g,"&quot;");
+    newRow.querySelector(".buy-btn").setAttribute("onclick", `openBuyModal(this,"${t}","${s}","${res.loose}","${res.cib}")`);
+    saveList();
+  })
+  .catch(() => {
+    newRow.querySelector(".price-box").innerHTML = `<span class='fetching-label'>error</span>`;
+    saveList();
+  });
 }
 function saveList() {
   const data = getSystemData();
@@ -634,7 +661,8 @@ function confirmBuy() {
   const loose = document.getElementById("buyModalLoose").value;
   const cib = document.getElementById("buyModalCib").value;
   if (!paid) { alert("Please enter what you paid."); return; }
-  addCollectionItem({title, system, paid: "$" + parseFloat(paid).toFixed(2), condition, loose, cib, id: Date.now().toString()});
+  const url = _buyRow ? _buyRow.dataset.url : "";
+  addCollectionItem({title, system, paid: "$" + parseFloat(paid).toFixed(2), condition, loose, cib, url, id: Date.now().toString()});
   if (_buyRow) { _buyRow.remove(); saveList(); }
   closeBuyModal();
 }
@@ -749,7 +777,16 @@ def fetch():
     updated = now_eastern()
     saved = load_gist()
     existing_data = saved.get("data", {})
-    existing_data.update(new_data)
+    # MERGE: add new games into existing systems without wiping them
+    for system, new_games in new_data.items():
+        if system in existing_data:
+            existing_titles = {g["title"]: g for g in existing_data[system]}
+            for game in new_games:
+                if game["title"] not in existing_titles:
+                    existing_data[system].append(game)
+            existing_data[system] = sorted(existing_data[system], key=lambda x: x["title"].lower())
+        else:
+            existing_data[system] = new_games
     save_gist({"data": existing_data, "collection": saved.get("collection", []), "updated": updated})
     return jsonify({"data": existing_data, "updated": updated})
 
