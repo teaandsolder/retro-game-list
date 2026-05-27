@@ -2,7 +2,7 @@ import os
 import re
 import json
 from datetime import datetime, timedelta
-from flask import Flask, render_template_string, request, jsonify
+from flask import Flask, render_template_string, request, jsonify, Response
 import requests
 from bs4 import BeautifulSoup
 
@@ -56,6 +56,48 @@ def calc_change(old_str, new_str):
     if abs(pct) < 1:
         return None
     return round(pct, 1)
+
+SLUG_TO_SYSTEM = {
+    "nes": "NES", "super-nintendo": "SNES", "nintendo-64": "N64",
+    "gamecube": "GAMECUBE", "wii": "WII", "wii-u": "WII U",
+    "gameboy": "GAMEBOY", "gameboy-color": "GAMEBOY COLOR",
+    "gameboy-advance": "GAMEBOY ADVANCE", "nintendo-ds": "DS",
+    "nintendo-dsi": "DSI", "nintendo-3ds": "3DS", "virtual-boy": "VIRTUAL BOY",
+    "playstation": "PS1", "playstation-2": "PS2", "playstation-3": "PS3",
+    "playstation-4": "PS4", "psp": "PSP", "ps-vita": "PS VITA",
+    "sega-master-system": "SEGA MASTER SYSTEM", "sega-genesis": "SEGA GENESIS",
+    "sega-cd": "SEGA CD", "sega-32x": "SEGA 32X", "sega-saturn": "SATURN",
+    "sega-dreamcast": "DREAMCAST", "sega-game-gear": "GAME GEAR", "sega-pico": "SEGA PICO",
+    "pc-engine": "PC ENGINE", "turbografx-16": "TURBOGRAFX-16",
+    "turbografx-cd": "PC ENGINE CD", "pc-fx": "PC-FX",
+    "neo-geo-aes": "NEO GEO AES", "neo-geo-mvs": "NEO GEO MVS",
+    "neo-geo-cd": "NEO GEO CD", "neo-geo-pocket": "NEO GEO POCKET",
+    "neo-geo-pocket-color": "NEO GEO POCKET COLOR",
+    "atari-2600": "ATARI 2600", "atari-5200": "ATARI 5200",
+    "atari-7800": "ATARI 7800", "atari-jaguar": "ATARI JAGUAR",
+    "atari-jaguar-cd": "ATARI JAGUAR CD", "atari-lynx": "ATARI LYNX",
+    "atari-st": "ATARI ST", "atari-400": "ATARI 400", "atari-800": "ATARI 800",
+    "xbox": "XBOX", "xbox-360": "XBOX 360", "xbox-one": "XBOX ONE",
+    "3do": "3DO", "philips-cdi": "CDI",
+    "commodore-64": "COMMODORE 64", "amiga": "AMIGA", "amiga-cd32": "AMIGA CD32",
+    "colecovision": "COLECOVISION", "intellivision": "INTELLIVISION",
+    "odyssey-2": "ODYSSEY 2", "vectrex": "VECTREX",
+    "wonderswan": "WONDERSWAN", "wonderswan-color": "WONDERSWAN COLOR",
+    "pc": "PC", "dos": "DOS", "windows": "WINDOWS",
+}
+
+def parse_pricecharting_url(url):
+    try:
+        m = re.search(r'pricecharting\.com/game/([^/]+)/([^/?#]+)', url)
+        if not m:
+            return None, None
+        sys_slug = m.group(1)
+        game_slug = m.group(2)
+        system = SLUG_TO_SYSTEM.get(sys_slug, sys_slug.replace("-", " ").upper())
+        title = game_slug.replace("-", " ").replace("%27", "'").title()
+        return system, title
+    except:
+        return None, None
 
 def get_market_price(system, title):
     sys_map = {
@@ -119,6 +161,22 @@ def get_market_price(system, title):
         print(f"Error fetching {url}: {e}")
         return "N/A", "N/A", url
 
+def get_price_from_url(url):
+    try:
+        headers = {"User-Agent": "Mozilla/5.0"}
+        r = requests.get(url, headers=headers, timeout=10)
+        soup = BeautifulSoup(r.text, "html.parser")
+        used_td = soup.find("td", id="used_price")
+        complete_td = soup.find("td", id="complete_price")
+        if not used_td or not complete_td:
+            return "N/A", "N/A"
+        loose = used_td.find("span", class_="price").text.strip()
+        cib = complete_td.find("span", class_="price").text.strip()
+        return loose, cib
+    except Exception as e:
+        print(f"Error fetching {url}: {e}")
+        return "N/A", "N/A"
+
 def enrich_with_change(new_game, old_game):
     if not old_game:
         return new_game
@@ -166,10 +224,12 @@ def refresh_collection(collection):
     updated = []
     for item in collection:
         time.sleep(0.5)
-        l, c, url = get_market_price(item["system"], item["title"])
+        if item.get("url"):
+            l, c = get_price_from_url(item["url"])
+        else:
+            l, c, _ = get_market_price(item["system"], item["title"])
         item["loose"] = l
         item["cib"] = c
-        item["url"] = url
         updated.append(item)
     return updated
 
@@ -334,6 +394,7 @@ textarea::placeholder { color: #bbb; line-height: 1.6; }
   <div class="action-bar">
     <button class="btn" id="updateBtn" onclick="updatePrices()">Update</button>
     <button class="btn" id="updateAllBtn" onclick="confirmUpdateAll()">Update All</button>
+    <button class="btn" onclick="exportList()" title="Export wishlist as text">Export</button>
   </div>
 
   <div class="import-toggle">
@@ -385,7 +446,7 @@ textarea::placeholder { color: #bbb; line-height: 1.6; }
           </div>
           {% endfor %}
           <div class="add-row">
-            <input class="add-input" type="text" placeholder="Add a game..." />
+            <input class="add-input" type="text" placeholder="Game name or PriceCharting URL..." />
             <button class="add-btn" onclick="addGame(this)">+</button>
           </div>
         </div>
@@ -402,7 +463,7 @@ textarea::placeholder { color: #bbb; line-height: 1.6; }
     </div>
     <div class="collection-body" id="collectionBody">
       {% for item in collection %}
-      <div class="coll-row" data-id="{{ item.id }}">
+      <div class="coll-row" data-id="{{ item.id }}" data-paid="{{ item.paid }}" data-condition="{{ item.condition }}">
         <div class="coll-title-wrap">
           <div class="coll-title" onclick="openCollPriceCharting(this)" data-url="{{ item.url }}">{{ item.title }}</div>
           <div class="coll-system">{{ item.system }} &middot; <span class="coll-condition">{{ item.condition }}</span></div>
@@ -420,7 +481,7 @@ textarea::placeholder { color: #bbb; line-height: 1.6; }
       </div>
       {% endfor %}
       <div class="coll-add-row">
-        <input class="coll-add-input" type="text" placeholder="Add to collection..." id="collAddInput" />
+        <input class="coll-add-input" type="text" placeholder="Game name or PriceCharting URL..." id="collAddInput" />
         <button class="coll-add-btn" onclick="openAddCollectionModal()">+</button>
       </div>
     </div>
@@ -436,6 +497,7 @@ textarea::placeholder { color: #bbb; line-height: 1.6; }
     <input type="hidden" id="buyModalSystem" />
     <input type="hidden" id="buyModalLoose" />
     <input type="hidden" id="buyModalCib" />
+    <input type="hidden" id="buyModalUrl" />
     <label>What did you pay?</label>
     <input type="number" id="buyModalPaid" placeholder="e.g. 12.50" step="0.01" min="0" />
     <label>Condition</label>
@@ -473,22 +535,46 @@ textarea::placeholder { color: #bbb; line-height: 1.6; }
 </div>
 
 <script>
+function exportList() {
+  const lines = [];
+  document.querySelectorAll(".system-card").forEach(card => {
+    const system = card.dataset.system;
+    const titles = [];
+    card.querySelectorAll(".game-row .game-title").forEach(el => {
+      const t = el.textContent.trim();
+      if (t) titles.push(t);
+    });
+    if (titles.length) {
+      lines.push(system + ":");
+      titles.forEach(t => lines.push(t));
+      lines.push("");
+    }
+  });
+  const text = lines.join("\\n").trimEnd();
+  const blob = new Blob([text], {type: "text/plain"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "retro-wishlist.txt";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function isPriceChartingUrl(str) {
+  return str.includes("pricecharting.com/game/");
+}
 function openPriceCharting(el) {
   const row = el.closest(".game-row");
   const url = row.dataset.url;
   const title = el.textContent.trim();
   if (!url) return;
-  if (confirm("Open " + title + " on PriceCharting?")) {
-    window.open(url, "_blank");
-  }
+  if (confirm("Open " + title + " on PriceCharting?")) { window.open(url, "_blank"); }
 }
 function openCollPriceCharting(el) {
   const url = el.dataset.url;
   const title = el.textContent.trim();
   if (!url) return;
-  if (confirm("Open " + title + " on PriceCharting?")) {
-    window.open(url, "_blank");
-  }
+  if (confirm("Open " + title + " on PriceCharting?")) { window.open(url, "_blank"); }
 }
 function toggleImport() { document.getElementById("importCard").classList.toggle("open"); }
 function toggleSystem(header) {
@@ -518,61 +604,71 @@ function deleteGame(btn) {
 function addGame(btn) {
   const addRow = btn.closest(".add-row");
   const input = addRow.querySelector(".add-input");
-  const title = input.value.trim();
-  if (!title) return;
+  const value = input.value.trim();
+  if (!value) return;
   const systemCard = addRow.closest(".system-card");
   const system = systemCard.dataset.system;
   const systemBody = addRow.closest(".system-body");
   input.value = "";
-
-  // Insert row immediately with fetching indicator
-  const newRow = document.createElement("div");
-  newRow.className = "game-row";
-  newRow.dataset.title = title;
-  newRow.dataset.url = "";
-  newRow.innerHTML = `<div class='game-title-wrap'><span class='game-title' onclick='openPriceCharting(this)'>${title}</span></div><div class='price-box'><span class='fetching-label'>fetching...</span></div><button class='buy-btn' onclick='openBuyModal(this,"${title.replace(/"/g,"&quot;")}","${system.replace(/"/g,"&quot;")}","","")'>✓</button><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>`;
-  systemBody.insertBefore(newRow, addRow);
-
-  // Auto-fetch price
-  fetch("/price_lookup", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({title, system})
-  })
-  .then(r => r.json())
-  .then(res => {
-    newRow.dataset.url = res.url || "";
-    let priceHtml = "";
-    if (res.loose === "N/A") {
-      priceHtml = `<a class='na-link' href='${res.url}' target='_blank'>N/A — Search</a>`;
-    } else {
-      priceHtml = `<div class='change-col'><span class='change'></span><span class='change'></span></div><a class='price-link' href='${res.url}' target='_blank'><div class='price-col'><div class='price-row'><span class='price-label'>L</span><span class='loose'>${res.loose}</span></div><div class='price-row'><span class='price-label'>CIB</span><span class='cib'>${res.cib}</span></div></div></a>`;
-    }
-    newRow.querySelector(".price-box").innerHTML = priceHtml;
-    const t = title.replace(/"/g,"&quot;");
-    const s = system.replace(/"/g,"&quot;");
-    newRow.querySelector(".buy-btn").setAttribute("onclick", `openBuyModal(this,"${t}","${s}","${res.loose}","${res.cib}")`);
-    saveList();
-  })
-  .catch(() => {
-    newRow.querySelector(".price-box").innerHTML = `<span class='fetching-label'>error</span>`;
-    saveList();
-  });
+  if (isPriceChartingUrl(value)) {
+    const newRow = document.createElement("div");
+    newRow.className = "game-row";
+    newRow.dataset.url = value;
+    newRow.innerHTML = `<div class='game-title-wrap'><span class='game-title'>resolving...</span></div><div class='price-box'><span class='fetching-label'>fetching...</span></div><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>`;
+    systemBody.insertBefore(newRow, addRow);
+    fetch("/lookup_url", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({url: value, system}) })
+      .then(r => r.json())
+      .then(res => {
+        newRow.dataset.title = res.title;
+        newRow.dataset.url = res.url || value;
+        newRow.querySelector(".game-title").textContent = res.title;
+        newRow.querySelector(".game-title").setAttribute("onclick", "openPriceCharting(this)");
+        let priceHtml = res.loose === "N/A"
+          ? `<a class='na-link' href='${res.url}' target='_blank'>N/A — Search</a>`
+          : `<div class='change-col'><span class='change'></span><span class='change'></span></div><a class='price-link' href='${res.url}' target='_blank'><div class='price-col'><div class='price-row'><span class='price-label'>L</span><span class='loose'>${res.loose}</span></div><div class='price-row'><span class='price-label'>CIB</span><span class='cib'>${res.cib}</span></div></div></a>`;
+        newRow.querySelector(".price-box").innerHTML = priceHtml;
+        const t = res.title.replace(/"/g,"&quot;");
+        const s = system.replace(/"/g,"&quot;");
+        const buyBtn = document.createElement("button");
+        buyBtn.className = "buy-btn";
+        buyBtn.setAttribute("onclick", `openBuyModal(this,"${t}","${s}","${res.loose}","${res.cib}")`);
+        buyBtn.textContent = "✓";
+        newRow.insertBefore(buyBtn, newRow.querySelector(".del-btn"));
+        saveList();
+      })
+      .catch(() => { newRow.querySelector(".game-title").textContent = "Error loading"; newRow.querySelector(".price-box").innerHTML = `<span class='fetching-label'>error</span>`; });
+  } else {
+    const title = value;
+    const newRow = document.createElement("div");
+    newRow.className = "game-row";
+    newRow.dataset.title = title;
+    newRow.dataset.url = "";
+    newRow.innerHTML = `<div class='game-title-wrap'><span class='game-title' onclick='openPriceCharting(this)'>${title}</span></div><div class='price-box'><span class='fetching-label'>fetching...</span></div><button class='buy-btn' onclick='openBuyModal(this,"${title.replace(/"/g,"&quot;")}","${system.replace(/"/g,"&quot;")}","","")'>✓</button><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>`;
+    systemBody.insertBefore(newRow, addRow);
+    fetch("/price_lookup", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({title, system}) })
+      .then(r => r.json())
+      .then(res => {
+        newRow.dataset.url = res.url || "";
+        let priceHtml = res.loose === "N/A"
+          ? `<a class='na-link' href='${res.url}' target='_blank'>N/A — Search</a>`
+          : `<div class='change-col'><span class='change'></span><span class='change'></span></div><a class='price-link' href='${res.url}' target='_blank'><div class='price-col'><div class='price-row'><span class='price-label'>L</span><span class='loose'>${res.loose}</span></div><div class='price-row'><span class='price-label'>CIB</span><span class='cib'>${res.cib}</span></div></div></a>`;
+        newRow.querySelector(".price-box").innerHTML = priceHtml;
+        const t = title.replace(/"/g,"&quot;");
+        const s = system.replace(/"/g,"&quot;");
+        newRow.querySelector(".buy-btn").setAttribute("onclick", `openBuyModal(this,"${t}","${s}","${res.loose}","${res.cib}")`);
+        saveList();
+      })
+      .catch(() => { newRow.querySelector(".price-box").innerHTML = `<span class='fetching-label'>error</span>`; saveList(); });
+  }
 }
 function saveList() {
   const data = getSystemData();
   const collection = getCollectionData();
-  fetch("/save", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({data, collection})
-  });
+  fetch("/save", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({data, collection}) });
 }
 function setLoading(msg) {
   ["fetchBtn","updateBtn","updateAllBtn"].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = true; });
-  const s = document.getElementById("spinner");
-  s.style.display = "block";
-  s.textContent = msg;
+  const s = document.getElementById("spinner"); s.style.display = "block"; s.textContent = msg;
 }
 function clearLoading() {
   ["fetchBtn","updateBtn","updateAllBtn"].forEach(id => { const el = document.getElementById(id); if(el) el.disabled = false; });
@@ -584,6 +680,14 @@ function changeHtml(val) {
   const arrow = val > 0 ? "↑" : "↓";
   return `<span class='change ${cls}'>${arrow}${Math.abs(val)}%</span>`;
 }
+function calcDiffHtml(paid, market) {
+  if (!paid || !market || market === "N/A" || market === "—") return "";
+  const paidNum = parseFloat(paid.replace("$",""));
+  const mktNum = parseFloat(market.replace("$","").replace(",",""));
+  if (isNaN(paidNum) || isNaN(mktNum)) return "";
+  const diff = mktNum - paidNum;
+  return `<div class='coll-diff ${diff>=0?"profit":"loss"}'>${diff>=0?"+":""}$${Math.abs(diff).toFixed(2)}</div>`;
+}
 function renderResults(data, updated) {
   let html = "";
   for (const [system, games] of Object.entries(data)) {
@@ -591,23 +695,15 @@ function renderResults(data, updated) {
     html += `<div class='system-header' onclick='toggleSystem(this)'>${system}<span class='chevron'>&#9660;</span></div>`;
     html += `<div class='system-body'>`;
     for (const game of games) {
-      let priceHtml = "";
-      if (game.loose === "N/A") {
-        priceHtml = `<a class='na-link' href='${game.url}' target='_blank'>N/A — Search</a>`;
-      } else {
-        priceHtml = `<div class='change-col'>${changeHtml(game.loose_change)}${changeHtml(game.cib_change)}</div><a class='price-link' href='${game.url}' target='_blank'><div class='price-col'><div class='price-row'><span class='price-label'>L</span><span class='loose'>${game.loose}</span></div><div class='price-row'><span class='price-label'>CIB</span><span class='cib'>${game.cib}</span></div></div></a>`;
-      }
+      let priceHtml = game.loose === "N/A"
+        ? `<a class='na-link' href='${game.url}' target='_blank'>N/A — Search</a>`
+        : `<div class='change-col'>${changeHtml(game.loose_change)}${changeHtml(game.cib_change)}</div><a class='price-link' href='${game.url}' target='_blank'><div class='price-col'><div class='price-row'><span class='price-label'>L</span><span class='loose'>${game.loose}</span></div><div class='price-row'><span class='price-label'>CIB</span><span class='cib'>${game.cib}</span></div></div></a>`;
       const t = game.title.replace(/'/g,"&#39;").replace(/"/g,"&quot;");
       const s = system.replace(/"/g,"&quot;");
-      const u = (game.url || "").replace(/"/g,"&quot;");
-      html += `<div class='game-row' data-title='${game.title.replace(/'/g,"&#39;")}' data-url='${u}'>`;
-      html += `<div class='game-title-wrap'><span class='game-title' onclick='openPriceCharting(this)'>${game.title}</span></div>`;
-      html += `<div class='price-box'>${priceHtml}</div>`;
-      html += `<button class='buy-btn' onclick='openBuyModal(this,"${t}","${s}","${game.loose}","${game.cib}")'>✓</button>`;
-      html += `<button class='del-btn' onclick='deleteGame(this)'>&#10005;</button></div>`;
+      const u = (game.url||"").replace(/"/g,"&quot;");
+      html += `<div class='game-row' data-title='${game.title.replace(/'/g,"&#39;")}' data-url='${u}'><div class='game-title-wrap'><span class='game-title' onclick='openPriceCharting(this)'>${game.title}</span></div><div class='price-box'>${priceHtml}</div><button class='buy-btn' onclick='openBuyModal(this,"${t}","${s}","${game.loose}","${game.cib}")'>✓</button><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button></div>`;
     }
-    html += `<div class='add-row'><input class='add-input' type='text' placeholder='Add a game...' /><button class='add-btn' onclick='addGame(this)'>+</button></div>`;
-    html += `</div></div>`;
+    html += `<div class='add-row'><input class='add-input' type='text' placeholder='Game name or PriceCharting URL...' /><button class='add-btn' onclick='addGame(this)'>+</button></div></div></div>`;
   }
   document.getElementById("results").innerHTML = html;
   document.getElementById("lastUpdated").textContent = "Last updated: " + updated;
@@ -646,13 +742,11 @@ function openBuyModal(btn, title, system, loose, cib) {
   document.getElementById("buyModalSystem").value = system;
   document.getElementById("buyModalLoose").value = loose;
   document.getElementById("buyModalCib").value = cib;
+  document.getElementById("buyModalUrl").value = _buyRow ? (_buyRow.dataset.url||"") : "";
   document.getElementById("buyModalPaid").value = "";
   document.getElementById("buyModal").classList.add("open");
 }
-function closeBuyModal() {
-  document.getElementById("buyModal").classList.remove("open");
-  _buyRow = null;
-}
+function closeBuyModal() { document.getElementById("buyModal").classList.remove("open"); _buyRow = null; }
 function confirmBuy() {
   const title = document.getElementById("buyModalTitle").value;
   const system = document.getElementById("buyModalSystem").value;
@@ -660,23 +754,30 @@ function confirmBuy() {
   const condition = document.getElementById("buyModalCondition").value;
   const loose = document.getElementById("buyModalLoose").value;
   const cib = document.getElementById("buyModalCib").value;
+  const url = document.getElementById("buyModalUrl").value;
   if (!paid) { alert("Please enter what you paid."); return; }
-  const url = _buyRow ? _buyRow.dataset.url : "";
   addCollectionItem({title, system, paid: "$" + parseFloat(paid).toFixed(2), condition, loose, cib, url, id: Date.now().toString()});
   if (_buyRow) { _buyRow.remove(); saveList(); }
   closeBuyModal();
 }
 function openAddCollectionModal() {
   const titleInput = document.getElementById("collAddInput");
-  document.getElementById("addCollTitle").value = titleInput.value.trim();
+  const val = titleInput.value.trim();
   titleInput.value = "";
-  document.getElementById("addCollSystem").value = "";
-  document.getElementById("addCollPaid").value = "";
-  document.getElementById("addCollModal").classList.add("open");
+  if (isPriceChartingUrl(val)) {
+    setLoading("Looking up game...");
+    fetch("/lookup_url", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({url: val, system: ""}) })
+      .then(r => r.json())
+      .then(res => { clearLoading(); document.getElementById("addCollTitle").value = res.title||""; document.getElementById("addCollSystem").value = res.system||""; document.getElementById("addCollPaid").value = ""; document.getElementById("addCollModal").classList.add("open"); })
+      .catch(() => { clearLoading(); document.getElementById("addCollModal").classList.add("open"); });
+  } else {
+    document.getElementById("addCollTitle").value = val;
+    document.getElementById("addCollSystem").value = "";
+    document.getElementById("addCollPaid").value = "";
+    document.getElementById("addCollModal").classList.add("open");
+  }
 }
-function closeAddCollModal() {
-  document.getElementById("addCollModal").classList.remove("open");
-}
+function closeAddCollModal() { document.getElementById("addCollModal").classList.remove("open"); }
 function confirmAddCollection() {
   const title = document.getElementById("addCollTitle").value.trim();
   const system = document.getElementById("addCollSystem").value.trim();
@@ -686,30 +787,19 @@ function confirmAddCollection() {
   setLoading("Looking up price...");
   fetch("/price_lookup", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({title, system}) })
     .then(r => r.json())
-    .then(res => {
-      clearLoading();
-      addCollectionItem({title, system, paid: "$" + parseFloat(paid).toFixed(2), condition, loose: res.loose, cib: res.cib, url: res.url, id: Date.now().toString()});
-      closeAddCollModal();
-      saveList();
-    })
+    .then(res => { clearLoading(); addCollectionItem({title, system, paid: "$" + parseFloat(paid).toFixed(2), condition, loose: res.loose, cib: res.cib, url: res.url, id: Date.now().toString()}); closeAddCollModal(); saveList(); })
     .catch(() => { clearLoading(); addCollectionItem({title, system, paid: "$" + parseFloat(paid).toFixed(2), condition, loose: null, cib: null, id: Date.now().toString()}); closeAddCollModal(); saveList(); });
 }
 function addCollectionItem(item) {
   const body = document.getElementById("collectionBody");
   const addRow = body.querySelector(".coll-add-row");
   const market = item.condition === "CIB" ? item.cib : item.loose;
-  let diffHtml = "";
-  if (item.paid && market && market !== "N/A") {
-    const paidNum = parseFloat(item.paid.replace("$",""));
-    const mktNum = parseFloat((market||"").replace("$","").replace(",",""));
-    if (!isNaN(paidNum) && !isNaN(mktNum)) {
-      const diff = mktNum - paidNum;
-      diffHtml = `<div class='coll-diff ${diff>=0?"profit":"loss"}'>${diff>=0?"+":""}$${Math.abs(diff).toFixed(2)}</div>`;
-    }
-  }
+  const diffHtml = calcDiffHtml(item.paid, market);
   const row = document.createElement("div");
   row.className = "coll-row";
   row.dataset.id = item.id;
+  row.dataset.paid = item.paid;
+  row.dataset.condition = item.condition;
   row.innerHTML = `<div class='coll-title-wrap'><div class='coll-title' onclick='openCollPriceCharting(this)' data-url='${item.url||""}'>${item.title}</div><div class='coll-system'>${item.system} &middot; <span class='coll-condition'>${item.condition}</span></div></div><div class='coll-prices'><div class='coll-paid'>Paid: ${item.paid}</div><div class='coll-market'>${market||"—"}</div>${diffHtml}</div><button class='del-btn' onclick='deleteCollectionItem(this)'>&#10005;</button>`;
   body.insertBefore(row, addRow);
   document.querySelector(".collection-header").classList.add("open");
@@ -730,8 +820,8 @@ function getCollectionData() {
     const condition = row.querySelector(".coll-condition")?.textContent.trim();
     const paidEl = row.querySelector(".coll-paid");
     const paid = paidEl ? paidEl.textContent.replace("Paid: ","").trim() : "";
-    const market = row.querySelector(".coll-market")?.textContent.trim();
-    if (title) items.push({id: row.dataset.id || Date.now().toString(), title, system: systemText, condition, paid, market});
+    const url = titleEl?.dataset.url || "";
+    if (title) items.push({id: row.dataset.id || Date.now().toString(), title, system: systemText, condition, paid, url});
   });
   return items;
 }
@@ -742,15 +832,7 @@ function renderCollection(collection) {
   body.querySelectorAll(".coll-row").forEach(r => r.remove());
   collection.forEach(item => {
     const market = item.condition === "CIB" ? item.cib : item.loose;
-    let diffHtml = "";
-    if (item.paid && market && market !== "N/A") {
-      const paidNum = parseFloat(item.paid.replace("$",""));
-      const mktNum = parseFloat((market||"").replace("$","").replace(",",""));
-      if (!isNaN(paidNum) && !isNaN(mktNum)) {
-        const diff = mktNum - paidNum;
-        diffHtml = `<div class='coll-diff ${diff>=0?"profit":"loss"}'>${diff>=0?"+":""}$${Math.abs(diff).toFixed(2)}</div>`;
-      }
-    }
+    const diffHtml = calcDiffHtml(item.paid, market);
     const row = document.createElement("div");
     row.className = "coll-row";
     row.dataset.id = item.id;
@@ -777,7 +859,6 @@ def fetch():
     updated = now_eastern()
     saved = load_gist()
     existing_data = saved.get("data", {})
-    # MERGE: add new games into existing systems without wiping them
     for system, new_games in new_data.items():
         if system in existing_data:
             existing_titles = {g["title"]: g for g in existing_data[system]}
@@ -832,7 +913,7 @@ def save():
             saved_item = saved_coll[item["id"]]
             item["loose"] = saved_item.get("loose", item.get("loose"))
             item["cib"] = saved_item.get("cib", item.get("cib"))
-            item["url"] = saved_item.get("url", item.get("url"))
+            item["url"] = item.get("url") or saved_item.get("url", "")
         merged_collection.append(item)
     save_gist({"data": existing_data, "collection": merged_collection, "updated": saved.get("updated")})
     return jsonify({"ok": True})
@@ -844,6 +925,19 @@ def price_lookup():
     system = body.get("system", "")
     l, c, url = get_market_price(system, title)
     return jsonify({"loose": l, "cib": c, "url": url})
+
+@app.route("/lookup_url", methods=["POST"])
+def lookup_url():
+    body = request.get_json()
+    url = body.get("url", "")
+    fallback_system = body.get("system", "")
+    system, title = parse_pricecharting_url(url)
+    if not system:
+        system = fallback_system
+    if not title:
+        return jsonify({"title": "", "system": system, "loose": "N/A", "cib": "N/A", "url": url})
+    l, c = get_price_from_url(url)
+    return jsonify({"title": title, "system": system, "loose": l, "cib": c, "url": url})
 
 if __name__ == "__main__":
     app.run()
