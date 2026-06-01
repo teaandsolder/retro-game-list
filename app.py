@@ -84,6 +84,8 @@ SLUG_TO_SYSTEM = {
     "odyssey-2": "ODYSSEY 2", "vectrex": "VECTREX",
     "wonderswan": "WONDERSWAN", "wonderswan-color": "WONDERSWAN COLOR",
     "pc": "PC", "dos": "DOS", "windows": "WINDOWS",
+    "famicom": "FAMICOM", "super-famicom": "SUPER FAMICOM",
+    "famicom-disk-system": "FAMICOM DISK SYSTEM",
 }
 
 def parse_pricecharting_url(url):
@@ -141,6 +143,9 @@ def get_market_price(system, title):
         "ODYSSEY 2": "odyssey-2", "VECTREX": "vectrex",
         "WONDERSWAN": "wonderswan", "WONDERSWAN COLOR": "wonderswan-color",
         "PC": "pc", "DOS": "dos", "WINDOWS": "windows",
+        "FAMICOM": "famicom",
+        "SUPER FAMICOM": "super-famicom",
+        "FAMICOM DISK SYSTEM": "famicom-disk-system",
     }
     sys_key = system.upper().strip()
     sys_slug = sys_map.get(sys_key, sys_key.lower().replace(" ", "-"))
@@ -394,7 +399,7 @@ textarea::placeholder { color: #bbb; line-height: 1.6; }
   <div class="action-bar">
     <button class="btn" id="updateBtn" onclick="updatePrices()">Update</button>
     <button class="btn" id="updateAllBtn" onclick="confirmUpdateAll()">Update All</button>
-    <button class="btn" onclick="exportList()" title="Export wishlist as text">Export</button>
+    <button class="btn" onclick="exportList()">Export</button>
   </div>
 
   <div class="import-toggle">
@@ -559,10 +564,7 @@ function exportList() {
   a.click();
   URL.revokeObjectURL(url);
 }
-
-function isPriceChartingUrl(str) {
-  return str.includes("pricecharting.com/game/");
-}
+function isPriceChartingUrl(str) { return str.includes("pricecharting.com/game/"); }
 function openPriceCharting(el) {
   const row = el.closest(".game-row");
   const url = row.dataset.url;
@@ -597,10 +599,7 @@ function getSystemData() {
   });
   return data;
 }
-function deleteGame(btn) {
-  btn.closest(".game-row").remove();
-  saveList();
-}
+function deleteGame(btn) { btn.closest(".game-row").remove(); saveList(); }
 function addGame(btn) {
   const addRow = btn.closest(".add-row");
   const input = addRow.querySelector(".add-input");
