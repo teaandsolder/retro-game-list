@@ -426,7 +426,7 @@ textarea::placeholder { color: #bbb; line-height: 1.6; }
         </div>
         <div class="system-body">
           {% for game in games %}
-          <div class="game-row" data-title="{{ game.title }}" data-url="{{ game.url }}">
+          <div class="game-row" data-title="{{ game.title }}" data-url="{{ game.url }}" data-loose="{{ game.loose }}" data-cib="{{ game.cib }}">
             <div class="game-title-wrap">
               <span class="game-title" onclick="openPriceCharting(this)">{{ game.title }}</span>
             </div>
@@ -587,6 +587,8 @@ function toggleCollection(header) {
   header.classList.toggle("open");
   document.getElementById("collectionBody").classList.toggle("open");
 }
+
+// KEY FIX: collect full game data including prices from data attributes
 function getSystemData() {
   const data = {};
   document.querySelectorAll(".system-card").forEach(card => {
@@ -594,12 +596,21 @@ function getSystemData() {
     data[system] = [];
     card.querySelectorAll(".game-row").forEach(row => {
       const title = row.querySelector(".game-title").textContent.trim();
-      if (title) data[system].push(title);
+      if (title) {
+        data[system].push({
+          title: title,
+          loose: row.dataset.loose || "-",
+          cib: row.dataset.cib || "-",
+          url: row.dataset.url || ""
+        });
+      }
     });
   });
   return data;
 }
+
 function deleteGame(btn) { btn.closest(".game-row").remove(); saveList(); }
+
 function addGame(btn) {
   const addRow = btn.closest(".add-row");
   const input = addRow.querySelector(".add-input");
@@ -613,6 +624,8 @@ function addGame(btn) {
     const newRow = document.createElement("div");
     newRow.className = "game-row";
     newRow.dataset.url = value;
+    newRow.dataset.loose = "-";
+    newRow.dataset.cib = "-";
     newRow.innerHTML = `<div class='game-title-wrap'><span class='game-title'>resolving...</span></div><div class='price-box'><span class='fetching-label'>fetching...</span></div><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>`;
     systemBody.insertBefore(newRow, addRow);
     fetch("/lookup_url", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({url: value, system}) })
@@ -620,6 +633,8 @@ function addGame(btn) {
       .then(res => {
         newRow.dataset.title = res.title;
         newRow.dataset.url = res.url || value;
+        newRow.dataset.loose = res.loose || "-";
+        newRow.dataset.cib = res.cib || "-";
         newRow.querySelector(".game-title").textContent = res.title;
         newRow.querySelector(".game-title").setAttribute("onclick", "openPriceCharting(this)");
         let priceHtml = res.loose === "N/A"
@@ -642,12 +657,16 @@ function addGame(btn) {
     newRow.className = "game-row";
     newRow.dataset.title = title;
     newRow.dataset.url = "";
+    newRow.dataset.loose = "-";
+    newRow.dataset.cib = "-";
     newRow.innerHTML = `<div class='game-title-wrap'><span class='game-title' onclick='openPriceCharting(this)'>${title}</span></div><div class='price-box'><span class='fetching-label'>fetching...</span></div><button class='buy-btn' onclick='openBuyModal(this,"${title.replace(/"/g,"&quot;")}","${system.replace(/"/g,"&quot;")}","","")'>✓</button><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button>`;
     systemBody.insertBefore(newRow, addRow);
     fetch("/price_lookup", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({title, system}) })
       .then(r => r.json())
       .then(res => {
         newRow.dataset.url = res.url || "";
+        newRow.dataset.loose = res.loose || "-";
+        newRow.dataset.cib = res.cib || "-";
         let priceHtml = res.loose === "N/A"
           ? `<a class='na-link' href='${res.url}' target='_blank'>N/A — Search</a>`
           : `<div class='change-col'><span class='change'></span><span class='change'></span></div><a class='price-link' href='${res.url}' target='_blank'><div class='price-col'><div class='price-row'><span class='price-label'>L</span><span class='loose'>${res.loose}</span></div><div class='price-row'><span class='price-label'>CIB</span><span class='cib'>${res.cib}</span></div></div></a>`;
@@ -660,6 +679,7 @@ function addGame(btn) {
       .catch(() => { newRow.querySelector(".price-box").innerHTML = `<span class='fetching-label'>error</span>`; saveList(); });
   }
 }
+
 function saveList() {
   const data = getSystemData();
   const collection = getCollectionData();
@@ -700,7 +720,11 @@ function renderResults(data, updated) {
       const t = game.title.replace(/'/g,"&#39;").replace(/"/g,"&quot;");
       const s = system.replace(/"/g,"&quot;");
       const u = (game.url||"").replace(/"/g,"&quot;");
-      html += `<div class='game-row' data-title='${game.title.replace(/'/g,"&#39;")}' data-url='${u}'><div class='game-title-wrap'><span class='game-title' onclick='openPriceCharting(this)'>${game.title}</span></div><div class='price-box'>${priceHtml}</div><button class='buy-btn' onclick='openBuyModal(this,"${t}","${s}","${game.loose}","${game.cib}")'>✓</button><button class='del-btn' onclick='deleteGame(this)'>&#10005;</button></div>`;
+      html += `<div class='game-row' data-title='${game.title.replace(/'/g,"&#39;")}' data-url='${u}' data-loose='${game.loose||"-"}' data-cib='${game.cib||"-"}'>`;
+      html += `<div class='game-title-wrap'><span class='game-title' onclick='openPriceCharting(this)'>${game.title}</span></div>`;
+      html += `<div class='price-box'>${priceHtml}</div>`;
+      html += `<button class='buy-btn' onclick='openBuyModal(this,"${t}","${s}","${game.loose}","${game.cib}")'>✓</button>`;
+      html += `<button class='del-btn' onclick='deleteGame(this)'>&#10005;</button></div>`;
     }
     html += `<div class='add-row'><input class='add-input' type='text' placeholder='Game name or PriceCharting URL...' /><button class='add-btn' onclick='addGame(this)'>+</button></div></div></div>`;
   }
@@ -876,7 +900,24 @@ def update():
     current_data = body.get("data", {})
     saved = load_gist()
     saved_data = saved.get("data", {})
-    final_data = smart_fetch(current_data, saved_data)
+    # current_data now contains full game objects with prices
+    final_data = {}
+    import time
+    for system, games in current_data.items():
+        final_data[system] = []
+        existing = {g["title"]: g for g in saved_data.get(system, [])}
+        for game in games:
+            title = game if isinstance(game, str) else game.get("title", "")
+            ex = existing.get(title, {})
+            if ex.get("loose") not in (None, "-", ""):
+                final_data[system].append(ex)
+            else:
+                time.sleep(0.5)
+                l, c, url = get_market_price(system, title)
+                new_game = {"title": title, "loose": l, "cib": c, "url": url}
+                new_game = enrich_with_change(new_game, ex)
+                final_data[system].append(new_game)
+        final_data[system] = sorted(final_data[system], key=lambda x: x["title"].lower())
     updated = now_eastern()
     save_gist({"data": final_data, "collection": saved.get("collection", []), "updated": updated})
     return jsonify({"data": final_data, "updated": updated})
@@ -899,12 +940,39 @@ def save():
     collection = body.get("collection", [])
     saved = load_gist()
     existing_data = saved.get("data", {})
-    for system, titles in current_data.items():
-        if system in existing_data:
-            existing_titles = {g["title"]: g for g in existing_data[system]}
-            existing_data[system] = [existing_titles.get(t, {"title": t, "loose": "-", "cib": "-", "url": ""}) for t in titles]
-        else:
-            existing_data[system] = [{"title": t, "loose": "-", "cib": "-", "url": ""} for t in titles]
+
+    for system, games in current_data.items():
+        existing_titles = {g["title"]: g for g in existing_data.get(system, [])}
+        merged = []
+        for game in games:
+            if isinstance(game, dict):
+                title = game.get("title", "")
+                # Use prices from frontend if they exist, else fall back to gist
+                ex = existing_titles.get(title, {})
+                loose = game.get("loose") if game.get("loose") not in (None, "-", "") else ex.get("loose", "-")
+                cib = game.get("cib") if game.get("cib") not in (None, "-", "") else ex.get("cib", "-")
+                url = game.get("url") or ex.get("url", "")
+                merged.append({
+                    "title": title,
+                    "loose": loose,
+                    "cib": cib,
+                    "url": url,
+                    "loose_change": ex.get("loose_change"),
+                    "cib_change": ex.get("cib_change"),
+                })
+            else:
+                # plain string title
+                ex = existing_titles.get(game, {})
+                merged.append({
+                    "title": game,
+                    "loose": ex.get("loose", "-"),
+                    "cib": ex.get("cib", "-"),
+                    "url": ex.get("url", ""),
+                    "loose_change": ex.get("loose_change"),
+                    "cib_change": ex.get("cib_change"),
+                })
+        existing_data[system] = merged
+
     saved_coll = {item["id"]: item for item in saved.get("collection", [])}
     merged_collection = []
     for item in collection:
